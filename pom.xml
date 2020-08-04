@@ -9,9 +9,9 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.zone24x7.faume</groupId>
-	<artifactId>WebApp</artifactId>
+	<artifactId>web-app</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>WebApp</name>
+	<name>web-app</name>
 	<description>Demo project for Spring Boot</description>
 
 	<properties>
