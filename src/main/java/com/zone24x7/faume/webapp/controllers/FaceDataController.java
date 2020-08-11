@@ -22,10 +22,10 @@ import java.util.List;
 public class FaceDataController {
     private static final Logger LOGGER = LoggerFactory.getLogger(FaceDataController.class);
 
-    @PostMapping(path = "/v1/web/verification/{requestId}")
-    public ResponseEntity<String> getRecommendation(@PathVariable String requestId,
-                                                    @RequestBody byte[] bytes,
-                                                    @RequestHeader("x-meta-info") String metaInfo) {
+    @PostMapping(path = "/v1/length-based/verification/{requestId}")
+    public ResponseEntity<String> postLengthBasedData(@PathVariable String requestId,
+                                                      @RequestBody byte[] bytes,
+                                                      @RequestHeader("x-meta-info") String metaInfo) {
         LOGGER.info("Received Face Data RequestId: {},  correlationID{}", requestId, MDC.get("correlationId"));
 
         ObjectMapper objectMapper = new ObjectMapper();
@@ -42,7 +42,7 @@ public class FaceDataController {
 
             getOutputFrames(lengthsAsInts, bytes);
         } catch (JsonProcessingException e) {
-            LOGGER.error("Exception occurred while de-serializing header: {}", metaInfo,  e);
+            LOGGER.error("Exception occurred while de-serializing header: {}", metaInfo, e);
             return new ResponseEntity<String>("Error in header", HttpStatus.BAD_REQUEST);
         }
 
@@ -51,7 +51,6 @@ public class FaceDataController {
     }
 
     /**
-     *
      * (2000); // 0 - 1999
      * (5000); 7000// 2000 - 6999
      * (3000); 10000// 7000 - 9999
@@ -70,9 +69,9 @@ public class FaceDataController {
 
             //TODO: Remove. Saving for tests
             try {
-                Files.write(Paths.get("frame" + length+ ".png"), bytes);
+                Files.write(Paths.get("frame" + length + ".png"), bytes);
             } catch (IOException e) {
-                LOGGER.error("Exception saving",e);
+                LOGGER.error("Exception saving", e);
             }
         }
         return outputFrames;
