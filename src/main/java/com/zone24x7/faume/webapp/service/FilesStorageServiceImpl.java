@@ -1,67 +1,53 @@
 package com.zone24x7.faume.webapp.service;
 
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.FileSystemUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.stream.Stream;
 
+/**
+ * Implementation of the FileStorageService interface
+ */
 @Service
 public class FilesStorageServiceImpl implements FilesStorageService {
     private final Path root = Paths.get("uploads");
 
+    /**
+     * Method to initialize file storage directory
+     */
     @Override
-    public void init() {
-        try {
-            Files.createDirectory(root);
-        } catch (IOException e) {
-            throw new RuntimeException("Could not initialize folder for upload!");
-        }
+    public void init() throws IOException {
+        Files.createDirectory(root);
     }
 
+    /**
+     * @param file multipart file which needs to be saved
+     */
     @Override
-    public void save(MultipartFile file) {
-        try {
-            Files.copy(file.getInputStream(), this.root.resolve(file.getOriginalFilename()));
-        } catch (Exception e) {
-            throw new RuntimeException("Could not store the file. Error: " + e.getMessage());
-        }
+    public void save(MultipartFile file) throws IOException {
+        Files.copy(file.getInputStream(), this.root.resolve(file.getName()));
     }
 
+    /**
+     * Method to save file when given as a byte array
+     *
+     * @param path Path to save
+     * @param file the file content as byte
+     */
     @Override
-    public Resource load(String filename) {
-        try {
-            Path file = root.resolve(filename);
-            Resource resource = new UrlResource(file.toUri());
-
-            if (resource.exists() || resource.isReadable()) {
-                return resource;
-            } else {
-                throw new RuntimeException("Could not read the file!");
-            }
-        } catch (MalformedURLException e) {
-            throw new RuntimeException("Error: " + e.getMessage());
-        }
+    public void save(Path path, byte[] file) throws IOException {
+        Files.write(Paths.get("frame" + file.length + ".png"), file);
     }
 
+    /**
+     * delete all the resources stored
+     */
     @Override
     public void deleteAll() {
         FileSystemUtils.deleteRecursively(root.toFile());
-    }
-
-    @Override
-    public Stream<Path> loadAll() {
-        try {
-            return Files.walk(this.root, 1).filter(path -> !path.equals(this.root)).map(this.root::relativize);
-        } catch (IOException e) {
-            throw new RuntimeException("Could not load the files!");
-        }
     }
 }

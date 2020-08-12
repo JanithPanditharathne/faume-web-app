@@ -8,17 +8,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import javax.annotation.Resource;
 
 @SpringBootApplication
-public class WebAppApplication implements CommandLineRunner {
-	@Resource
-	FilesStorageService storageService;
+public class WebAppApplication{
 
 	public static void main(String[] args) {
 		SpringApplication.run(WebAppApplication.class, args);
 	}
 
-	@Override
-	public void run(String... arg) throws Exception {
-		storageService.deleteAll();
-		storageService.init();
-	}
 }

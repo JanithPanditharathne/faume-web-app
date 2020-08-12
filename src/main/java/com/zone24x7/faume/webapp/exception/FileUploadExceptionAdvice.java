@@ -7,8 +7,19 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
+/**
+ * Controller Advice for file upload exception
+ */
+
 @ControllerAdvice
 public class FileUploadExceptionAdvice {
+
+    /**
+     * Exception handler for too large file
+     *
+     * @param exc exception occured
+     * @return Response message
+     */
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ResponseMessage> handleMaxSizeException(MaxUploadSizeExceededException exc) {
         return ResponseEntity
