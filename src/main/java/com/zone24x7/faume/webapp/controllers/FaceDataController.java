@@ -4,9 +4,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.zone24x7.faume.webapp.pojo.ChunkRequestMetaInfo;
 import com.zone24x7.faume.webapp.pojo.OutputFrame;
 import com.zone24x7.faume.webapp.pojo.RequestMetaInfo;
 import com.zone24x7.faume.webapp.service.FilesStorageService;
+import com.zone24x7.faume.webapp.util.JsonPojoConverter;
+import com.zone24x7.faume.webapp.processors.ChunkProcessor;
 import com.zone24x7.faume.webapp.util.JsonPojoConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +38,9 @@ public class FaceDataController {
 
     @Autowired
     private FilesStorageService storageService;
+
+    @Autowired
+    private ChunkProcessor chunkProcessor;
 
     /**
      * Method to post face data from the length based approach
@@ -73,6 +81,43 @@ public class FaceDataController {
         }
 
         LOGGER.info("Byte array length: {}, meta-info", bytes.length, metaInfo);
+        ObjectNode jsonNode = JsonNodeFactory.instance.objectNode();
+        jsonNode.put("status", "success");
+        return new ResponseEntity<>(jsonNode, HttpStatus.OK);
+    }
+
+    /**
+     * Controller method to post data based on chunks.
+     *
+     * @param requestId the request id
+     * @param data      the data
+     * @param metaInfo  the meta information
+     * @return 200 OK if success, 400 if the request is malformed, 403 if the request has expired
+     */
+    @PostMapping(path = "/v1/chunk-based/verification/web/{requestId}")
+    public ResponseEntity<Object> postChunkBasedData(@PathVariable String requestId,
+                                                     @RequestBody byte[] data,
+                                                     @RequestHeader("x-meta-info") String metaInfo) {
+
+        String correlationId = MDC.get("correlationId");
+        LOGGER.info("Received Face Data RequestId: {},  correlationId: {}", requestId, correlationId);
+        ChunkRequestMetaInfo chunkRequestMetaInfo;
+
+        try {
+            chunkRequestMetaInfo = JsonPojoConverter.toPojo(metaInfo, ChunkRequestMetaInfo.class);
+        } catch (IOException e) {
+            return new ResponseEntity<>("Request is malformed.", HttpStatus.BAD_REQUEST);
+        }
+
+        if (!requestId.equals(chunkRequestMetaInfo.getRequestId())) {
+            return new ResponseEntity<>("Request is malformed.", HttpStatus.BAD_REQUEST);
+        }
+
+        //TODO: Validate request validity and send 403 forbidden if invalid.
+
+        //TODO: Unblock servlet thread.
+        chunkProcessor.storeDataChunk(chunkRequestMetaInfo, data, correlationId);
+
         ObjectNode jsonNode = JsonNodeFactory.instance.objectNode();
         jsonNode.put("status", "success");
         return new ResponseEntity<>(jsonNode, HttpStatus.OK);
