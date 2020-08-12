@@ -44,7 +44,7 @@ public class RequestResponseLoggingFilter implements Filter {
 
         final String correlationId = getCorrelationIdFromHeader(httpRequest);
 
-        LOGGER.info("[REQUEST] UUID={} METHOD={} PATH={} QSTRING={} ORIGIN={}",
+        LOGGER.info("[CorrelationId: {}] METHOD={} PATH={} QSTRING={} ORIGIN={}",
                     correlationId,
                     httpRequest.getMethod(),
                     httpRequest.getServletPath(),
@@ -55,7 +55,7 @@ public class RequestResponseLoggingFilter implements Filter {
 
         chain.doFilter(request, response);
 
-        LOGGER.info("[RESPONSE] UUID={} METHOD={} PATH={} QSTRING={} ORIGIN={} STIME={}ms STATUS={}",
+        LOGGER.info("[CorrelationId: {}] METHOD={} PATH={} QSTRING={} ORIGIN={} STIME={}ms STATUS={}",
                     correlationId,
                     httpRequest.getMethod(),
                     httpRequest.getServletPath(),

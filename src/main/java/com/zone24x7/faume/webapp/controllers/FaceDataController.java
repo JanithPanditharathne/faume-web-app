@@ -55,13 +55,13 @@ public class FaceDataController {
                                                       @RequestBody byte[] bytes,
                                                       @RequestHeader("x-meta-info") String metaInfo) {
 
-        LOGGER.info("Received Face Data RequestId: {},  correlationId: {}", requestId, MDC.get("correlationId"));
+        LOGGER.info("[CorrelationId: {}] Received Face Data RequestId: {}", MDC.get("correlationId"), requestId);
         RequestMetaInfo requestMetaInfo;
 
         try {
             requestMetaInfo = JsonPojoConverter.toPojo(metaInfo, RequestMetaInfo.class);
         } catch (IOException ioe) {
-            LOGGER.error("Error occurred when converting meta-info header information to POJO", ioe);
+            LOGGER.error("[CorrelationId: {}] Error occurred when converting meta-info header information to POJO", MDC.get("correlationId"), ioe);
             return new ResponseEntity<>("Request is malformed", HttpStatus.BAD_REQUEST);
         }
 
@@ -76,11 +76,11 @@ public class FaceDataController {
 
             getOutputFrames(lengthsAsInts, bytes);
         } catch (NumberFormatException e) {
-            LOGGER.error("Exception occurred while de-serializing header: {}", metaInfo, e);
+            LOGGER.error("[CorrelationId: {}] Exception occurred while de-serializing header: {}", MDC.get("correlationId"), metaInfo, e);
             return new ResponseEntity<>("Request is malformed", HttpStatus.BAD_REQUEST);
         }
 
-        LOGGER.info("Byte array length: {}, meta-info", bytes.length, metaInfo);
+        LOGGER.info("[CorrelationId: {}] Byte array length: {}, meta-info: {}", MDC.get("correlationId"), bytes.length, metaInfo);
         ObjectNode jsonNode = JsonNodeFactory.instance.objectNode();
         jsonNode.put("status", "success");
         return new ResponseEntity<>(jsonNode, HttpStatus.OK);
@@ -145,7 +145,7 @@ public class FaceDataController {
             try {
                 storageService.save(Paths.get("frame" + length + ".png"), bytes);
             } catch (IOException e) {
-                LOGGER.error("Error occurred when trying to save file{}", "frame" + length + ".png");
+                LOGGER.error("[CorrelationId: {}] Error occurred when trying to save file{}", MDC.get("correlationId"), "frame" + length + ".png");
             }
         }
 
@@ -161,14 +161,14 @@ public class FaceDataController {
      */
     @PostMapping("/v1/multi-part/verification/web/{requestId}")
     public ResponseEntity<Object> postMultiPartBasedData(@RequestParam("files") MultipartFile[] files, @PathVariable("requestId") String requestId) {
-        LOGGER.info("Received Face Data RequestId: {},  correlationId: {}, files: {}", requestId, MDC.get("correlationId"), files.length);
+        LOGGER.info("[CorrelationId: {}] Received Face Data RequestId: {}, files: {}", MDC.get("correlationId"), requestId, files.length);
 
         //TODO: Remove. Saving for tests
         Arrays.asList(files).forEach(file -> {
             try {
                 storageService.save(file);
             } catch (IOException e) {
-                LOGGER.error("Error occurred when trying to save file: {}", file.getName());
+                LOGGER.error("[CorrelationId: {}] Error occurred when trying to save file: {}", MDC.get("correlationId"), file.getName());
             }
         });
 
