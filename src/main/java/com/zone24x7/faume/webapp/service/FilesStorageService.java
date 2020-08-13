@@ -32,6 +32,15 @@ public interface FilesStorageService {
     public void save(Path path, byte[] file) throws IOException;
 
     /**
+     * Method to save file when given as a byte array
+     *
+     * @param path Path to save
+     * @param file the file content as byte
+     * @param type the image type
+     */
+    public void saveImage(Path path, byte[] file, String type) throws IOException;
+
+    /**
      * delete all the resources stored
      */
     public void deleteAll();

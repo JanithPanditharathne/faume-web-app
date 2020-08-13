@@ -1,17 +1,12 @@
 package com.zone24x7.faume.webapp.controllers;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.zone24x7.faume.webapp.pojo.ChunkRequestMetaInfo;
 import com.zone24x7.faume.webapp.pojo.OutputFrame;
 import com.zone24x7.faume.webapp.pojo.RequestMetaInfo;
-import com.zone24x7.faume.webapp.service.FilesStorageService;
-import com.zone24x7.faume.webapp.util.JsonPojoConverter;
 import com.zone24x7.faume.webapp.processors.ChunkProcessor;
+import com.zone24x7.faume.webapp.service.FilesStorageService;
 import com.zone24x7.faume.webapp.util.JsonPojoConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,7 +18,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -50,6 +44,8 @@ public class FaceDataController {
      * @param metaInfo  the meta info header
      * @return 200 OK if success, 400 if request is malformed, 403 if request is expired.
      */
+    //TODO: Add Proper CORS
+    @CrossOrigin(origins = "*")
     @PostMapping(path = "/v1/length-based/verification/web/{requestId}")
     public ResponseEntity<Object> postLengthBasedData(@PathVariable String requestId,
                                                       @RequestBody byte[] bytes,
@@ -94,6 +90,8 @@ public class FaceDataController {
      * @param metaInfo  the meta information
      * @return 200 OK if success, 400 if the request is malformed, 403 if the request has expired
      */
+    //TODO: Add Proper CORS
+    @CrossOrigin(origins = "*")
     @PostMapping(path = "/v1/chunk-based/verification/web/{requestId}")
     public ResponseEntity<Object> postChunkBasedData(@PathVariable String requestId,
                                                      @RequestBody byte[] data,
@@ -124,6 +122,33 @@ public class FaceDataController {
     }
 
     /**
+     * Method to post face data from the multi-part approach
+     *
+     * @param files     files to be uploaded
+     * @param requestId the requestId
+     * @return 200 OK if success, 400 if request is malformed, 403 if request is expired.
+     */
+    //TODO: Add Proper CORS
+    @CrossOrigin(origins = "*")
+    @PostMapping("/v1/multi-part/verification/web/{requestId}")
+    public ResponseEntity<Object> postMultiPartBasedData(@RequestParam("files") MultipartFile[] files, @PathVariable("requestId") String requestId) {
+        LOGGER.info("[CorrelationId: {}] Received Face Data RequestId: {}, files: {}", MDC.get("correlationId"), requestId, files.length);
+
+        //TODO: Remove. Saving for tests
+        Arrays.asList(files).forEach(file -> {
+            try {
+                storageService.save(file);
+            } catch (IOException e) {
+                LOGGER.error("[CorrelationId: {}] Error occurred when trying to save file: {}", MDC.get("correlationId"), file.getName());
+            }
+        });
+
+        ObjectNode jsonNode = JsonNodeFactory.instance.objectNode();
+        jsonNode.put("status", "success");
+        return new ResponseEntity<>(jsonNode, HttpStatus.OK);
+    }
+
+    /**
      * (2000); // 0 - 1999
      * (5000); 7000// 2000 - 6999
      * (3000); 10000// 7000 - 9999
@@ -143,37 +168,12 @@ public class FaceDataController {
 
             //TODO: Remove. Saving for tests
             try {
-                storageService.save(Paths.get("frame" + length + ".png"), bytes);
+                storageService.saveImage(Paths.get("frame" + length + ".png"), bytes, "png");
             } catch (IOException e) {
                 LOGGER.error("[CorrelationId: {}] Error occurred when trying to save file{}", MDC.get("correlationId"), "frame" + length + ".png");
             }
         }
 
         return outputFrames;
-    }
-
-    /**
-     * Method to post face data from the multi-part approach
-     *
-     * @param files     files to be uploaded
-     * @param requestId the requestId
-     * @return 200 OK if success, 400 if request is malformed, 403 if request is expired.
-     */
-    @PostMapping("/v1/multi-part/verification/web/{requestId}")
-    public ResponseEntity<Object> postMultiPartBasedData(@RequestParam("files") MultipartFile[] files, @PathVariable("requestId") String requestId) {
-        LOGGER.info("[CorrelationId: {}] Received Face Data RequestId: {}, files: {}", MDC.get("correlationId"), requestId, files.length);
-
-        //TODO: Remove. Saving for tests
-        Arrays.asList(files).forEach(file -> {
-            try {
-                storageService.save(file);
-            } catch (IOException e) {
-                LOGGER.error("[CorrelationId: {}] Error occurred when trying to save file: {}", MDC.get("correlationId"), file.getName());
-            }
-        });
-
-        ObjectNode jsonNode = JsonNodeFactory.instance.objectNode();
-        jsonNode.put("status", "success");
-        return new ResponseEntity<>(jsonNode, HttpStatus.OK);
     }
 }

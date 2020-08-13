@@ -4,6 +4,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.FileSystemUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -41,6 +45,19 @@ public class FilesStorageServiceImpl implements FilesStorageService {
     @Override
     public void save(Path path, byte[] file) throws IOException {
         Files.write(Paths.get("frame" + file.length + ".png"), file);
+    }
+
+    /**
+     * Method to save file when given as a byte array
+     *
+     * @param path Path to save
+     * @param file the file content as byte
+     * @param type the image type
+     */
+    @Override
+    public void saveImage(Path path, byte[] file, String type) throws IOException {
+        BufferedImage bufferedImage = ImageIO.read(new ByteArrayInputStream(file));
+        ImageIO.write(bufferedImage, "png", path.toFile());
     }
 
     /**
