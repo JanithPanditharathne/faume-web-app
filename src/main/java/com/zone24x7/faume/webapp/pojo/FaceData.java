@@ -10,7 +10,7 @@ public class FaceData {
     private String accountId;
     private int profileCount;
     private int patternId;
-    private String roi;
+    private int roi;
     private List<byte[]> data;
 
     /**
@@ -23,7 +23,7 @@ public class FaceData {
      * @param roi the roi
      * @param data the data to be sent
      */
-    public FaceData(String requestId, String accountId, int profileCount, int patternId, String roi, List<byte[]> data) {
+    public FaceData(String requestId, String accountId, int profileCount, int patternId, int roi, List<byte[]> data) {
         this.requestId = requestId;
         this.accountId = accountId;
         this.profileCount = profileCount;
@@ -82,7 +82,7 @@ public class FaceData {
      *
      * @return the ROI
      */
-    public String getRoi() {
+    public int getRoi() {
         return roi;
     }
 }

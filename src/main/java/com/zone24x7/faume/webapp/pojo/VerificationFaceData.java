@@ -8,7 +8,7 @@ import java.util.List;
 public class VerificationFaceData {
     private String userId;
     private List<String> frames;
-    private String roi;
+    private int roi;
 
     /**
      * Constructor to instantiate VerificationFaceData
@@ -16,7 +16,7 @@ public class VerificationFaceData {
      * @param frames the frames
      * @param roi the roi
      */
-    public VerificationFaceData(String userId, List<String> frames, String roi) {
+    public VerificationFaceData(String userId, List<String> frames, int roi) {
         this.userId = userId;
         this.frames = frames;
         this.roi = roi;
@@ -45,7 +45,7 @@ public class VerificationFaceData {
      *
      * @return the ROI
      */
-    public String getRoi() {
+    public int getRoi() {
         return roi;
     }
 }

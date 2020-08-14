@@ -88,6 +88,8 @@ public class FaceDataController {
             return new ResponseEntity<>("Request is malformed", HttpStatus.BAD_REQUEST);
         }
 
+        requestMetaInfo.setRequestId(requestId);
+
         String lengths = requestMetaInfo.getLengths();
         String[] splits = lengths.split("\\s*,\\s*");
         List<Integer> lengthsAsInts = new LinkedList<>();
