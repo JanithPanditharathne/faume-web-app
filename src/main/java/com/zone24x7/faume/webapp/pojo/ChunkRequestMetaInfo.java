@@ -7,6 +7,7 @@ public class ChunkRequestMetaInfo {
     private String requestId;
     private int totalChunkCount;
     private int chunkId;
+    private String roi;
 
     /**
      * Method to get the request id.
@@ -60,5 +61,23 @@ public class ChunkRequestMetaInfo {
      */
     public void setChunkId(int chunkId) {
         this.chunkId = chunkId;
+    }
+
+    /**
+     * Method to get the Region of interest
+     *
+     * @return the region of interest
+     */
+    public String getRoi() {
+        return roi;
+    }
+
+    /**
+     * Method to set the region of interest
+     *
+     * @param roi the region of interest
+     */
+    public void setRoi(String roi) {
+        this.roi = roi;
     }
 }

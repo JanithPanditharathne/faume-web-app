@@ -6,6 +6,7 @@ package com.zone24x7.faume.webapp.pojo;
 public class RequestMetaInfo {
     private String lengths;
     private String requestId;
+    private String roi;
 
     /**
      * Method to get the length of the request meta-info
@@ -41,5 +42,23 @@ public class RequestMetaInfo {
      */
     public void setRequestId(String requestId) {
         this.requestId = requestId;
+    }
+
+    /**
+     * Method to get the region of interest
+     *
+     * @return region of interest
+     */
+    public String getRoi() {
+        return roi;
+    }
+
+    /**
+     * Method to set the region of interest
+     *
+     * @param roi region of interest to be set
+     */
+    public void setRoi(String roi) {
+        this.roi = roi;
     }
 }

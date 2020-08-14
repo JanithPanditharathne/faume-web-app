@@ -9,6 +9,7 @@ import com.zone24x7.faume.webapp.pojo.OutputFrame;
 import com.zone24x7.faume.webapp.pojo.RequestMetaInfo;
 import com.zone24x7.faume.webapp.processors.ChunkProcessor;
 import com.zone24x7.faume.webapp.service.FaceDataVerificationService;
+import com.zone24x7.faume.webapp.processors.ChunkProcessor;
 import com.zone24x7.faume.webapp.service.FilesStorageService;
 import com.zone24x7.faume.webapp.util.JsonPojoConverter;
 import com.zone24x7.faume.webapp.util.AppConfigStringConstants;
@@ -147,13 +148,14 @@ public class FaceDataController {
      *
      * @param files     files to be uploaded
      * @param requestId the requestId
+     * @param roi the region of interest
      * @return 200 OK if success, 400 if request is malformed, 403 if request is expired.
      */
     //TODO: Add Proper CORS
     @CrossOrigin(origins = "*")
     @PostMapping("/v1/multi-part/verification/web/{requestId}")
-    public ResponseEntity<Object> postMultiPartBasedData(@RequestParam("files") MultipartFile[] files, @PathVariable("requestId") String requestId) {
-        LOGGER.info("[CorrelationId: {}] Received Face Data RequestId: {}, files: {}", MDC.get("correlationId"), requestId, files.length);
+    public ResponseEntity<Object> postMultiPartBasedData(@RequestParam("files") MultipartFile[] files, @PathVariable("requestId") String requestId, @RequestParam("roi") String roi ) {
+        LOGGER.info("[CorrelationId: {}] Received Face Data RequestId: {}, files: {}, roi: {}", MDC.get("correlationId"), requestId, files.length, roi);
 
         //TODO: Remove. Saving for tests
         Arrays.asList(files).forEach(file -> {
