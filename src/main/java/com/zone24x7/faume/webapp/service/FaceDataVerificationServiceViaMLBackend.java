@@ -29,10 +29,16 @@ public class FaceDataVerificationServiceViaMLBackend implements FaceDataVerifica
     @Value(AppConfigStringConstants.CONFIG_FACE_DATA_VERIFICATION_URL)
     private String mlBackendUrl;
 
+    @Value(AppConfigStringConstants.CONFIG_REST_TEMPLATE_CONN_TIMEOUT_IN_MILLIS)
+    private long restTemplateConnectionTimeoutInMillis;
+
+    @Value(AppConfigStringConstants.CONFIG_REST_TEMPLATE_READ_TIMEOUT_IN_MILLIS)
+    private long restTemplateReadTimeoutInMillis;
+
     /**
      * Method to send face data for verification.
      *
-     * @param faceData the face data
+     * @param faceData      the face data
      * @param correlationId the correlation id
      * @return the response from the ML backend
      * @throws FaceDataVerificationException if an error occurs when sending face data
@@ -40,12 +46,11 @@ public class FaceDataVerificationServiceViaMLBackend implements FaceDataVerifica
     @Override
     public String sendFaceDataForVerification(FaceData faceData, String correlationId) throws FaceDataVerificationException {
         RestTemplate restTemplate = restTemplateBuilder
-                .setConnectTimeout(Duration.ofMillis(20000))
-                .setReadTimeout(Duration.ofMillis(20000))
+                .setConnectTimeout(Duration.ofMillis(restTemplateConnectionTimeoutInMillis))
+                .setReadTimeout(Duration.ofMillis(restTemplateReadTimeoutInMillis))
                 .build();
 
         List<byte[]> faceDataByteList = faceData.getData();
-
         List<String> base64DataToSend = new LinkedList<>();
 
         for (byte[] data : faceDataByteList) {
@@ -53,7 +58,6 @@ public class FaceDataVerificationServiceViaMLBackend implements FaceDataVerifica
         }
 
         VerificationFaceData verificationFaceData = new VerificationFaceData(faceData.getAccountId(), base64DataToSend, faceData.getRoi());
-
         JsonNode verificationFaceDataAsJson = JsonPojoConverter.toJson(verificationFaceData);
 
         try {

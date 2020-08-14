@@ -9,10 +9,10 @@ import com.zone24x7.faume.webapp.pojo.OutputFrame;
 import com.zone24x7.faume.webapp.pojo.RequestMetaInfo;
 import com.zone24x7.faume.webapp.processors.ChunkProcessor;
 import com.zone24x7.faume.webapp.service.FaceDataVerificationService;
-import com.zone24x7.faume.webapp.processors.ChunkProcessor;
 import com.zone24x7.faume.webapp.service.FilesStorageService;
-import com.zone24x7.faume.webapp.util.JsonPojoConverter;
 import com.zone24x7.faume.webapp.util.AppConfigStringConstants;
+import com.zone24x7.faume.webapp.util.JsonPojoConverter;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -75,6 +75,11 @@ public class FaceDataController {
         String correlationId = MDC.get("correlationId");
         LOGGER.info("[CorrelationId: {}] Received Face Data RequestId: {}", correlationId, requestId);
         RequestMetaInfo requestMetaInfo;
+
+        if (StringUtils.isEmpty(metaInfo)) {
+            LOGGER.error("[CorrelationId: {}] x-meta-info header not found", correlationId);
+            return new ResponseEntity<>("Request is malformed", HttpStatus.BAD_REQUEST);
+        }
 
         try {
             requestMetaInfo = JsonPojoConverter.toPojo(metaInfo, RequestMetaInfo.class);
@@ -196,24 +201,22 @@ public class FaceDataController {
             outputFrames.add(new OutputFrame(count++, bytes));
 
             //TODO: Remove. Saving for tests
-
             if (saveFaceDataToFile) {
                 try {
                     storageService.saveImage(Paths.get("frame" + length + ".png"), bytes, "png");
                 } catch (IOException e) {
-                    LOGGER.error("[CorrelationId: {}] Error occurred when trying to save file{}", correlationId, "frame" + length + ".png");
+                    LOGGER.error("[CorrelationId: {}] Error occurred when trying to save file : {}", correlationId, "frame" + length + ".png");
                 }
             }
         }
 
-        //TODO: Add roi
-        FaceData faceData = new FaceData(requestMetaInfo.getRequestId(), accountId, profileCount, patternId, "roi", data);
+        FaceData faceData = new FaceData(requestMetaInfo.getRequestId(), accountId, profileCount, patternId, requestMetaInfo.getRoi(), data);
 
         try {
             String result = faceDataVerificationService.sendFaceDataForVerification(faceData, correlationId);
-            LOGGER.info("[CorrelationId: {}] RESPONSE FROM ML BACKEND : {}", correlationId, result);
+            LOGGER.info("[CorrelationId: {}] Response from face verification : {}", correlationId, result);
         } catch (FaceDataVerificationException e) {
-            LOGGER.error("Error occurred when trying to verify face data", e);
+            LOGGER.error("[CorrelationId: {}] Error occurred when trying to verify face data", correlationId, e);
         }
 
         return outputFrames;
