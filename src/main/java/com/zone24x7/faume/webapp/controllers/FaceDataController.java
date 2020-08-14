@@ -2,16 +2,21 @@ package com.zone24x7.faume.webapp.controllers;
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.zone24x7.faume.webapp.exception.FaceDataVerificationException;
 import com.zone24x7.faume.webapp.pojo.ChunkRequestMetaInfo;
+import com.zone24x7.faume.webapp.pojo.FaceData;
 import com.zone24x7.faume.webapp.pojo.OutputFrame;
 import com.zone24x7.faume.webapp.pojo.RequestMetaInfo;
 import com.zone24x7.faume.webapp.processors.ChunkProcessor;
+import com.zone24x7.faume.webapp.service.FaceDataVerificationService;
 import com.zone24x7.faume.webapp.service.FilesStorageService;
 import com.zone24x7.faume.webapp.util.JsonPojoConverter;
+import com.zone24x7.faume.webapp.util.AppConfigStringConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -36,6 +41,21 @@ public class FaceDataController {
     @Autowired
     private ChunkProcessor chunkProcessor;
 
+    @Autowired
+    private FaceDataVerificationService faceDataVerificationService;
+
+    @Value(AppConfigStringConstants.CONFIG_ACCOUNT_ID)
+    private String accountId;
+
+    @Value(AppConfigStringConstants.CONFIG_PROFILE_COUNT)
+    private int profileCount;
+
+    @Value(AppConfigStringConstants.CONFIG_PATTERN_ID)
+    private int patternId;
+
+    @Value(AppConfigStringConstants.CONFIG_FACE_DATA_SAVE_TO_FILE)
+    private boolean saveFaceDataToFile;
+
     /**
      * Method to post face data from the length based approach
      *
@@ -51,13 +71,14 @@ public class FaceDataController {
                                                       @RequestBody byte[] bytes,
                                                       @RequestHeader("x-meta-info") String metaInfo) {
 
-        LOGGER.info("[CorrelationId: {}] Received Face Data RequestId: {}", MDC.get("correlationId"), requestId);
+        String correlationId = MDC.get("correlationId");
+        LOGGER.info("[CorrelationId: {}] Received Face Data RequestId: {}", correlationId, requestId);
         RequestMetaInfo requestMetaInfo;
 
         try {
             requestMetaInfo = JsonPojoConverter.toPojo(metaInfo, RequestMetaInfo.class);
         } catch (IOException ioe) {
-            LOGGER.error("[CorrelationId: {}] Error occurred when converting meta-info header information to POJO", MDC.get("correlationId"), ioe);
+            LOGGER.error("[CorrelationId: {}] Error occurred when converting meta-info header information to POJO", correlationId, ioe);
             return new ResponseEntity<>("Request is malformed", HttpStatus.BAD_REQUEST);
         }
 
@@ -70,13 +91,13 @@ public class FaceDataController {
                 lengthsAsInts.add(Integer.valueOf(length));
             }
 
-            getOutputFrames(lengthsAsInts, bytes);
+            getOutputFrames(lengthsAsInts, bytes, requestMetaInfo, correlationId);
         } catch (NumberFormatException e) {
-            LOGGER.error("[CorrelationId: {}] Exception occurred while de-serializing header: {}", MDC.get("correlationId"), metaInfo, e);
+            LOGGER.error("[CorrelationId: {}] Exception occurred while de-serializing header: {}", correlationId, metaInfo, e);
             return new ResponseEntity<>("Request is malformed", HttpStatus.BAD_REQUEST);
         }
 
-        LOGGER.info("[CorrelationId: {}] Byte array length: {}, meta-info: {}", MDC.get("correlationId"), bytes.length, metaInfo);
+        LOGGER.info("[CorrelationId: {}] Byte array length: {}, meta-info: {}", correlationId, bytes.length, metaInfo);
         ObjectNode jsonNode = JsonNodeFactory.instance.objectNode();
         jsonNode.put("status", "success");
         return new ResponseEntity<>(jsonNode, HttpStatus.OK);
@@ -153,25 +174,44 @@ public class FaceDataController {
      * (5000); 7000// 2000 - 6999
      * (3000); 10000// 7000 - 9999
      *
-     * @param images images array
+     * @param images          images array
+     * @param requestMetaInfo the request meta information
+     * @param correlationId   the correlation id
      * @return list of output frames
      */
-    private List<OutputFrame> getOutputFrames(List<Integer> lengths, byte[] images) {
+    private List<OutputFrame> getOutputFrames(List<Integer> lengths, byte[] images, RequestMetaInfo requestMetaInfo, String correlationId) {
         List<OutputFrame> outputFrames = new LinkedList<>();
         int i = 0;
         int count = 0;
 
+        List<byte[]> data = new LinkedList<>();
+
         for (int length : lengths) {
             byte[] bytes = Arrays.copyOfRange(images, i, length + i);
+            data.add(bytes);
+
             i += length;
             outputFrames.add(new OutputFrame(count++, bytes));
 
             //TODO: Remove. Saving for tests
-            try {
-                storageService.saveImage(Paths.get("frame" + length + ".png"), bytes, "png");
-            } catch (IOException e) {
-                LOGGER.error("[CorrelationId: {}] Error occurred when trying to save file{}", MDC.get("correlationId"), "frame" + length + ".png");
+
+            if (saveFaceDataToFile) {
+                try {
+                    storageService.saveImage(Paths.get("frame" + length + ".png"), bytes, "png");
+                } catch (IOException e) {
+                    LOGGER.error("[CorrelationId: {}] Error occurred when trying to save file{}", correlationId, "frame" + length + ".png");
+                }
             }
+        }
+
+        //TODO: Add roi
+        FaceData faceData = new FaceData(requestMetaInfo.getRequestId(), accountId, profileCount, patternId, "roi", data);
+
+        try {
+            String result = faceDataVerificationService.sendFaceDataForVerification(faceData, correlationId);
+            LOGGER.info("[CorrelationId: {}] RESPONSE FROM ML BACKEND : {}", correlationId, result);
+        } catch (FaceDataVerificationException e) {
+            LOGGER.error("Error occurred when trying to verify face data", e);
         }
 
         return outputFrames;
