@@ -11,6 +11,8 @@ public final class AppConfigStringConstants {
     public static final String CONFIG_FACE_DATA_SAVE_TO_FILE = "${face.data.save-to-file}";
     public static final String CONFIG_REST_TEMPLATE_CONN_TIMEOUT_IN_MILLIS = "${spring.rest-template.connection.timeout-in-millis}";
     public static final String CONFIG_REST_TEMPLATE_READ_TIMEOUT_IN_MILLIS = "${spring.rest-template.read.timeout-in-millis}";
+    public static final String CONFIG_INTEGRATION_APP_URL = "${face.integration-app.url}";
+    public static final String CONFIG_CORS_ALLOWED_URL = "${app.cross-origin.allowed-origins}";
 
     /**
      * Private constructor to stop initiation

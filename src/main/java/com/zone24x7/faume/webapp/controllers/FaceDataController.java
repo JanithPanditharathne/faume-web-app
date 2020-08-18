@@ -3,10 +3,8 @@ package com.zone24x7.faume.webapp.controllers;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.zone24x7.faume.webapp.exception.FaceDataVerificationException;
-import com.zone24x7.faume.webapp.pojo.ChunkRequestMetaInfo;
-import com.zone24x7.faume.webapp.pojo.FaceData;
-import com.zone24x7.faume.webapp.pojo.OutputFrame;
-import com.zone24x7.faume.webapp.pojo.RequestMetaInfo;
+import com.zone24x7.faume.webapp.exception.RequestIdException;
+import com.zone24x7.faume.webapp.pojo.*;
 import com.zone24x7.faume.webapp.processors.ChunkProcessor;
 import com.zone24x7.faume.webapp.service.FaceDataVerificationService;
 import com.zone24x7.faume.webapp.service.FilesStorageService;
@@ -56,6 +54,9 @@ public class FaceDataController {
 
     @Value(AppConfigStringConstants.CONFIG_FACE_DATA_SAVE_TO_FILE)
     private boolean saveFaceDataToFile;
+
+    @Value(AppConfigStringConstants.CONFIG_CORS_ALLOWED_URL)
+    private static final String corsAllowedOrigin="*";
 
     /**
      * Method to post face data from the length based approach
@@ -120,7 +121,7 @@ public class FaceDataController {
      * @return 200 OK if success, 400 if the request is malformed, 403 if the request has expired
      */
     //TODO: Add Proper CORS
-    @CrossOrigin(origins = "*")
+    @CrossOrigin(origins = corsAllowedOrigin)
     @PostMapping(path = "/v1/chunk-based/verification/web/{requestId}")
     public ResponseEntity<Object> postChunkBasedData(@PathVariable String requestId,
                                                      @RequestBody byte[] data,
@@ -159,7 +160,7 @@ public class FaceDataController {
      * @return 200 OK if success, 400 if request is malformed, 403 if request is expired.
      */
     //TODO: Add Proper CORS
-    @CrossOrigin(origins = "*")
+    @CrossOrigin(origins = corsAllowedOrigin)
     @PostMapping("/v1/multi-part/verification/web/{requestId}")
     public ResponseEntity<Object> postMultiPartBasedData(@RequestParam("files") MultipartFile[] files, @PathVariable("requestId") String requestId, @RequestParam("roi") String roi ) {
         LOGGER.info("[CorrelationId: {}] Received Face Data RequestId: {}, files: {}, roi: {}", MDC.get("correlationId"), requestId, files.length, roi);
@@ -223,4 +224,31 @@ public class FaceDataController {
 
         return outputFrames;
     }
+
+    /**
+     * Method to get the request id associate with a given verification id.
+     *
+     * @param verificationId the verification id.
+     * @return status: VALID if the given verification id is valid, INVALID if the given verification id is invalid.
+     *         request_id: the request id associated with the given verification id.
+     */
+    @CrossOrigin(origins = corsAllowedOrigin)
+    @GetMapping("/v1/request-info")
+    public ResponseEntity<Object> getRequestId(@RequestParam("verification_id") String verificationId){
+        String correlationId = MDC.get("correlationId");
+
+        if (verificationId.isEmpty()){
+            return new ResponseEntity<>("Verification Id is mandatory", HttpStatus.BAD_REQUEST);
+        }
+
+        try {
+            RequestIdResponse requestIdFromVerificationId = faceDataVerificationService.getRequestIdFromVerificationId(verificationId);
+            LOGGER.info("[CorrelationId: {}] received the request id: {} from verification id : {}", correlationId, requestIdFromVerificationId.getRequestId(), verificationId);
+            return new ResponseEntity<>(requestIdFromVerificationId, HttpStatus.OK);
+        } catch (RequestIdException e) {
+            LOGGER.info("[CorrelationId: {}] Error occurred when trying to get the request id from verification id.", correlationId, e);
+            return new ResponseEntity<>("Error occurred when trying to get the request id from verification id.", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 }

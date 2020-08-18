@@ -2,16 +2,20 @@ package com.zone24x7.faume.webapp.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.zone24x7.faume.webapp.exception.FaceDataVerificationException;
+import com.zone24x7.faume.webapp.exception.RequestIdException;
 import com.zone24x7.faume.webapp.pojo.FaceData;
+import com.zone24x7.faume.webapp.pojo.RequestIdResponse;
 import com.zone24x7.faume.webapp.pojo.VerificationFaceData;
 import com.zone24x7.faume.webapp.util.AppConfigStringConstants;
 import com.zone24x7.faume.webapp.util.JsonPojoConverter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.Duration;
 import java.util.Base64;
@@ -26,11 +30,18 @@ public class FaceDataVerificationServiceViaMLBackend implements FaceDataVerifica
     @Autowired
     private RestTemplateBuilder restTemplateBuilder;
 
+    @Qualifier("webClientBuilder")
+    @Autowired
+    private WebClient.Builder webClientBuilder;
+
     @Value(AppConfigStringConstants.CONFIG_FACE_DATA_VERIFICATION_URL)
     private String mlBackendUrl;
 
+    @Value(AppConfigStringConstants.CONFIG_INTEGRATION_APP_URL)
+    private String integrationAppUrl;
+
     @Value(AppConfigStringConstants.CONFIG_REST_TEMPLATE_CONN_TIMEOUT_IN_MILLIS)
-    private long restTemplateConnectionTimeoutInMillis;
+    private int restTemplateConnectionTimeoutInMillis;
 
     @Value(AppConfigStringConstants.CONFIG_REST_TEMPLATE_READ_TIMEOUT_IN_MILLIS)
     private long restTemplateReadTimeoutInMillis;
@@ -67,5 +78,54 @@ public class FaceDataVerificationServiceViaMLBackend implements FaceDataVerifica
         } catch (Exception e) {
             throw new FaceDataVerificationException("Unknown error occurred when trying to send face data to ML backend.", e);
         }
+    }
+
+
+    /**
+     * Method to send verification id to integration app for retrieving request id.
+     *
+     * @param verificationId the verification id.
+     * @return RequestIdResponse
+     * @throws RequestIdException if an error occurred while sending verification id to integration app.
+     */
+    public RequestIdResponse getRequestIdFromVerificationId(String verificationId) {
+
+
+
+        WebClient webClient = webClientBuilder
+                .baseUrl(integrationAppUrl)
+                .build();
+
+        RequestIdResponse requestIdResponse = webClient
+                .get()
+                .uri(uriBuilder -> uriBuilder.path("/request-info").queryParam("verification_id", "{verificationId}").build(verificationId))
+                .retrieve()
+                .bodyToMono(RequestIdResponse.class)
+                .block();
+
+        String requestIdVerificationResponse = verifyRequestId(requestIdResponse.getRequestId());
+        //TODO: need to handle the request id verification response
+
+        return requestIdResponse;
+
+    }
+
+    /**
+     * Method to send requestId to integration app and get verified
+     *
+     * @param requestId request id to be verified
+     * @return verification status: VALID/INVALID
+     */
+    public String verifyRequestId(String requestId) {
+        WebClient webClient = webClientBuilder
+                .baseUrl(integrationAppUrl)
+                .build();
+
+        return webClient
+                .get()
+                .uri(uriBuilder -> uriBuilder.path("/request-verification").queryParam("request_id", "{requestId}").build(requestId))
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
     }
 }
