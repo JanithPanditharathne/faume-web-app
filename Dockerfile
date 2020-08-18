@@ -29,5 +29,5 @@ FROM adoptopenjdk/openjdk11:alpine
 RUN mkdir -p /app
 WORKDIR /app
 COPY --from=Builder /app/target/integration-app.jar /app
-EXPOSE 8082
+EXPOSE 8081
 CMD ["java","-jar","/app/integration-app.jar"]
