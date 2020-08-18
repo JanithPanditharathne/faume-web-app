@@ -22,12 +22,12 @@ RUN mkdir -p /usr/share/maven /usr/share/maven/ref \
 
 ENV MAVEN_HOME /usr/share/maven
 ENV MAVEN_CONFIG "$USER_HOME_DIR/.m2"
-RUN cd /app &&  mvn clean package && mv target/integration-app-*.jar  target/integration-app.jar
+RUN cd /app &&  mvn clean package && mv target/web-app-*.jar  target/web-app.jar
 
 
 FROM adoptopenjdk/openjdk11:alpine
 RUN mkdir -p /app
 WORKDIR /app
-COPY --from=Builder /app/target/integration-app.jar /app
+COPY --from=Builder /app/target/web-app.jar /app
 EXPOSE 8081
-CMD ["java","-jar","/app/integration-app.jar"]
+CMD ["java","-jar","/app/web-app.jar"]
