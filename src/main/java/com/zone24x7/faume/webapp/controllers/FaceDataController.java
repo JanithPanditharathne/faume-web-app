@@ -1,5 +1,6 @@
 package com.zone24x7.faume.webapp.controllers;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.zone24x7.faume.webapp.exception.FaceDataVerificationException;
@@ -222,6 +223,30 @@ public class FaceDataController {
         } catch (FaceDataVerificationException e) {
             LOGGER.info("[CorrelationId: {}] Error occurred when trying to get the request id from verification id.", correlationId, e);
             return new ResponseEntity<>("Error occurred when trying to get the request id from verification id.", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Controller method to store device binding information.
+     *
+     * @param requestId the request id
+     * @param deviceBrowserInfo the face match result
+     * @return 200 OK status if success, 400 if bad request and 403 if forbidden
+     */
+    @CrossOrigin(origins = AppConfigStringConstants.CONFIG_CORS_ALLOWED_URLS)
+    @PostMapping(path = "/v1/web/device-browser-info")
+    public ResponseEntity<Object> sendFaceMatchResults(@RequestParam(value = "request_id") String requestId,
+                                                       @RequestBody DeviceBrowserInfo deviceBrowserInfo) {
+
+        String correlationId = MDC.get(StringConstants.CORRELATION_ID);
+        LOGGER.info("[CorrelationId: {}] Received device browser data. Request Id : {}, DeviceBrowserInfo: {}", correlationId, requestId, deviceBrowserInfo);
+
+        try {
+            JsonNode response = faceDataVerificationService.sendDeviceBrowserInfo(requestId, deviceBrowserInfo);
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        } catch (FaceDataVerificationException e) {
+            LOGGER.info("[CorrelationId: {}] Error occurred when trying to send device browser information", correlationId, e);
+            return new ResponseEntity<>("Error occurred when trying to send device browser information.", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

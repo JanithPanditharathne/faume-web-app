@@ -2,10 +2,7 @@ package com.zone24x7.faume.webapp.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.zone24x7.faume.webapp.exception.FaceDataVerificationException;
-import com.zone24x7.faume.webapp.pojo.FaceData;
-import com.zone24x7.faume.webapp.pojo.RequestIdResponse;
-import com.zone24x7.faume.webapp.pojo.RequestIdStatus;
-import com.zone24x7.faume.webapp.pojo.VerificationFaceData;
+import com.zone24x7.faume.webapp.pojo.*;
 import com.zone24x7.faume.webapp.util.AppConfigStringConstants;
 import com.zone24x7.faume.webapp.util.JsonPojoConverter;
 import com.zone24x7.faume.webapp.util.StringConstants;
@@ -17,6 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.util.Base64;
@@ -117,15 +115,39 @@ public class FaceDataVerificationServiceViaMLBackend implements FaceDataVerifica
         WebClient webClient = webClientBuilder.baseUrl(integrationAppUrl).build();
 
         try {
-        RequestIdResponse requestIdResponse = webClient
-                .get()
-                .uri(uriBuilder -> uriBuilder.path("/v1/request-verification").queryParam("request_id", "{requestId}").build(requestId))
-                .header(StringConstants.X_API_KEY_HEADER, integrationAppApiKey)
-                .retrieve()
-                .bodyToMono(RequestIdResponse.class)
-                .block();
+            RequestIdResponse requestIdResponse = webClient
+                    .get()
+                    .uri(uriBuilder -> uriBuilder.path("/v1/request-verification").queryParam("request_id", "{requestId}").build(requestId))
+                    .header(StringConstants.X_API_KEY_HEADER, integrationAppApiKey)
+                    .retrieve()
+                    .bodyToMono(RequestIdResponse.class)
+                    .block();
 
             return requestIdResponse != null && RequestIdStatus.VALID == requestIdResponse.getStatus();
+        } catch (Exception e) {
+            throw new FaceDataVerificationException("Error occurred when trying to retrieve status of the request id : " + requestId, e);
+        }
+    }
+
+    /**
+     * Method to send requestId to integration app and get verified
+     *
+     * @param requestId         request id to be verified
+     * @param deviceBrowserInfo the device browser information
+     * @return verification status: VALID/INVALID
+     */
+    public JsonNode sendDeviceBrowserInfo(String requestId, DeviceBrowserInfo deviceBrowserInfo) throws FaceDataVerificationException {
+        WebClient webClient = webClientBuilder.baseUrl(integrationAppUrl).build();
+
+        try {
+            return webClient
+                    .post()
+                    .uri(uriBuilder -> uriBuilder.path("/v1/device-browser-info").queryParam("request_id", "{requestId}").build(requestId))
+                    .body(Mono.just(deviceBrowserInfo), DeviceBrowserInfo.class)
+                    .header(StringConstants.X_API_KEY_HEADER, integrationAppApiKey)
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .block();
         } catch (Exception e) {
             throw new FaceDataVerificationException("Error occurred when trying to retrieve status of the request id : " + requestId, e);
         }

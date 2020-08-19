@@ -1,6 +1,8 @@
 package com.zone24x7.faume.webapp.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.zone24x7.faume.webapp.exception.FaceDataVerificationException;
+import com.zone24x7.faume.webapp.pojo.DeviceBrowserInfo;
 import com.zone24x7.faume.webapp.pojo.FaceData;
 import com.zone24x7.faume.webapp.pojo.RequestIdResponse;
 
@@ -34,4 +36,13 @@ public interface FaceDataVerificationService {
      * @return verification status: VALID/INVALID
      */
     boolean isRequestValid(String requestId) throws FaceDataVerificationException;
+
+    /**
+     * Method to send requestId to integration app and get verified
+     *
+     * @param requestId         request id to be verified
+     * @param deviceBrowserInfo the device browser information
+     * @return verification status: VALID/INVALID
+     */
+    JsonNode sendDeviceBrowserInfo(String requestId, DeviceBrowserInfo deviceBrowserInfo) throws FaceDataVerificationException;
 }
