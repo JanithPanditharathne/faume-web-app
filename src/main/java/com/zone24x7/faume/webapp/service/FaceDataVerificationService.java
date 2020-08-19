@@ -1,7 +1,6 @@
 package com.zone24x7.faume.webapp.service;
 
 import com.zone24x7.faume.webapp.exception.FaceDataVerificationException;
-import com.zone24x7.faume.webapp.exception.RequestIdException;
 import com.zone24x7.faume.webapp.pojo.FaceData;
 import com.zone24x7.faume.webapp.pojo.RequestIdResponse;
 
@@ -25,7 +24,14 @@ public interface FaceDataVerificationService {
      *
      * @param verificationId the verification id.
      * @return RequestIdResponse
-     * @throws RequestIdException if an error occurred while sending verification id to integration app.
      */
-    RequestIdResponse getRequestIdFromVerificationId(String verificationId) throws RequestIdException;
+    RequestIdResponse getRequestIdFromVerificationId(String verificationId) throws FaceDataVerificationException;
+
+    /**
+     * Method to send requestId to integration app and get verified
+     *
+     * @param requestId request id to be verified
+     * @return verification status: VALID/INVALID
+     */
+    boolean isRequestValid(String requestId) throws FaceDataVerificationException;
 }

@@ -7,27 +7,17 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class RequestIdResponse {
     @JsonProperty("status")
-    private Validity status;
+    private RequestIdStatus status;
+
     @JsonProperty("request_id")
     private String requestId;
-
-    /**
-     * Constructor to initiate RequestIdResponse
-     *
-     * @param status the status of the get request_id from verification id request
-     * @param requestId the request id
-     */
-    public RequestIdResponse(Validity status, String requestId) {
-        this.status = status;
-        this.requestId = requestId;
-    }
 
     /**
      * Method to get the status
      *
      * @return the status
      */
-    public Validity getStatus() {
+    public RequestIdStatus getStatus() {
         return status;
     }
 
@@ -36,7 +26,7 @@ public class RequestIdResponse {
      *
      * @param status the status
      */
-    public void setStatus(Validity status) {
+    public void setStatus(RequestIdStatus status) {
         this.status = status;
     }
 

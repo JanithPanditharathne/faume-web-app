@@ -34,9 +34,7 @@ public class SpringMainConfig {
         TcpClient tcpClient = TcpClient
                 .create()
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, restTemplateConnectionTimeoutInMillis)
-                .doOnConnected(connection -> {
-                    connection.addHandlerLast(new ReadTimeoutHandler(restTemplateReadTimeoutInMillis, TimeUnit.MILLISECONDS));
-                });
+                .doOnConnected(connection -> connection.addHandlerLast(new ReadTimeoutHandler(restTemplateReadTimeoutInMillis, TimeUnit.MILLISECONDS)));
 
         return WebClient.builder().clientConnector(new ReactorClientHttpConnector(HttpClient.from(tcpClient)));
     }

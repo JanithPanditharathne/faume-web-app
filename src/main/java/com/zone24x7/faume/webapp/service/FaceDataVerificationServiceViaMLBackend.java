@@ -2,12 +2,13 @@ package com.zone24x7.faume.webapp.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.zone24x7.faume.webapp.exception.FaceDataVerificationException;
-import com.zone24x7.faume.webapp.exception.RequestIdException;
 import com.zone24x7.faume.webapp.pojo.FaceData;
 import com.zone24x7.faume.webapp.pojo.RequestIdResponse;
+import com.zone24x7.faume.webapp.pojo.RequestIdStatus;
 import com.zone24x7.faume.webapp.pojo.VerificationFaceData;
 import com.zone24x7.faume.webapp.util.AppConfigStringConstants;
 import com.zone24x7.faume.webapp.util.JsonPojoConverter;
+import com.zone24x7.faume.webapp.util.StringConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,8 +31,8 @@ public class FaceDataVerificationServiceViaMLBackend implements FaceDataVerifica
     @Autowired
     private RestTemplateBuilder restTemplateBuilder;
 
-    @Qualifier("webClientBuilder")
     @Autowired
+    @Qualifier("webClientBuilder")
     private WebClient.Builder webClientBuilder;
 
     @Value(AppConfigStringConstants.CONFIG_FACE_DATA_VERIFICATION_URL)
@@ -45,6 +46,9 @@ public class FaceDataVerificationServiceViaMLBackend implements FaceDataVerifica
 
     @Value(AppConfigStringConstants.CONFIG_REST_TEMPLATE_READ_TIMEOUT_IN_MILLIS)
     private long restTemplateReadTimeoutInMillis;
+
+    @Value(AppConfigStringConstants.INTEGRATION_APP_API_KEYS)
+    private String integrationAppApiKey;
 
     /**
      * Method to send face data for verification.
@@ -80,34 +84,26 @@ public class FaceDataVerificationServiceViaMLBackend implements FaceDataVerifica
         }
     }
 
-
     /**
      * Method to send verification id to integration app for retrieving request id.
      *
      * @param verificationId the verification id.
      * @return RequestIdResponse
-     * @throws RequestIdException if an error occurred while sending verification id to integration app.
      */
-    public RequestIdResponse getRequestIdFromVerificationId(String verificationId) {
+    public RequestIdResponse getRequestIdFromVerificationId(String verificationId) throws FaceDataVerificationException {
+        WebClient webClient = webClientBuilder.baseUrl(integrationAppUrl).build();
 
-
-
-        WebClient webClient = webClientBuilder
-                .baseUrl(integrationAppUrl)
-                .build();
-
-        RequestIdResponse requestIdResponse = webClient
-                .get()
-                .uri(uriBuilder -> uriBuilder.path("/request-info").queryParam("verification_id", "{verificationId}").build(verificationId))
-                .retrieve()
-                .bodyToMono(RequestIdResponse.class)
-                .block();
-
-        String requestIdVerificationResponse = verifyRequestId(requestIdResponse.getRequestId());
-        //TODO: need to handle the request id verification response
-
-        return requestIdResponse;
-
+        try {
+            return webClient
+                    .get()
+                    .uri(uriBuilder -> uriBuilder.path("/v1/request-info").queryParam("verification_id", "{verificationId}").build(verificationId))
+                    .header(StringConstants.X_API_KEY_HEADER, integrationAppApiKey)
+                    .retrieve()
+                    .bodyToMono(RequestIdResponse.class)
+                    .block();
+        } catch (Exception e) {
+            throw new FaceDataVerificationException("Error occurred when trying to retrieve request id for given verification id : " + verificationId, e);
+        }
     }
 
     /**
@@ -116,16 +112,21 @@ public class FaceDataVerificationServiceViaMLBackend implements FaceDataVerifica
      * @param requestId request id to be verified
      * @return verification status: VALID/INVALID
      */
-    public String verifyRequestId(String requestId) {
-        WebClient webClient = webClientBuilder
-                .baseUrl(integrationAppUrl)
-                .build();
+    public boolean isRequestValid(String requestId) throws FaceDataVerificationException {
+        WebClient webClient = webClientBuilder.baseUrl(integrationAppUrl).build();
 
-        return webClient
+        try {
+        RequestIdResponse requestIdResponse = webClient
                 .get()
-                .uri(uriBuilder -> uriBuilder.path("/request-verification").queryParam("request_id", "{requestId}").build(requestId))
+                .uri(uriBuilder -> uriBuilder.path("/v1/request-verification").queryParam("request_id", "{requestId}").build(requestId))
+                .header(StringConstants.X_API_KEY_HEADER, integrationAppApiKey)
                 .retrieve()
-                .bodyToMono(String.class)
+                .bodyToMono(RequestIdResponse.class)
                 .block();
+
+            return requestIdResponse != null && RequestIdStatus.VALID == requestIdResponse.getStatus();
+        } catch (Exception e) {
+            throw new FaceDataVerificationException("Error occurred when trying to retrieve status of the request id : " + requestId, e);
+        }
     }
 }
