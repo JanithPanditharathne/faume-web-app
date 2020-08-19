@@ -60,6 +60,7 @@ public class FaceDataVerificationServiceViaMLBackend implements FaceDataVerifica
      */
     @Override
     public String sendFaceDataForVerification(FaceData faceData, String correlationId) throws FaceDataVerificationException {
+        //TODO: Change to
         RestTemplate restTemplate = restTemplateBuilder
                 .setConnectTimeout(Duration.ofMillis(restTemplateConnectionTimeoutInMillis))
                 .setReadTimeout(Duration.ofMillis(restTemplateReadTimeoutInMillis))

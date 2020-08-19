@@ -87,6 +87,15 @@ public class FaceDataController {
 
         requestMetaInfo.setRequestId(requestId);
 
+        try {
+            if (!faceDataVerificationService.isRequestValid(requestId)) {
+                return new ResponseEntity<>("Request is expired", HttpStatus.FORBIDDEN);
+            }
+        } catch (FaceDataVerificationException e) {
+            LOGGER.info("[CorrelationId: {}] Error occurred when trying to check the status of the request id.", correlationId, e);
+            return new ResponseEntity<>("Error occurred when trying to check the status of the request id.", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
         String lengths = requestMetaInfo.getLengths();
         String[] splits = lengths.split("\\s*,\\s*");
         List<Integer> lengthsAsInts = new LinkedList<>();
@@ -136,7 +145,14 @@ public class FaceDataController {
             return new ResponseEntity<>("Request is malformed.", HttpStatus.BAD_REQUEST);
         }
 
-        //TODO: Validate request validity and send 403 forbidden if invalid.
+        try {
+            if (!faceDataVerificationService.isRequestValid(requestId)) {
+                return new ResponseEntity<>("Request is expired", HttpStatus.FORBIDDEN);
+            }
+        } catch (FaceDataVerificationException e) {
+            LOGGER.info("[CorrelationId: {}] Error occurred when trying to check the status of the request id.", correlationId, e);
+            return new ResponseEntity<>("Error occurred when trying to check the status of the request id.", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
 
         //TODO: Unblock servlet thread.
         chunkProcessor.storeDataChunk(chunkRequestMetaInfo, data, correlationId);
@@ -157,7 +173,17 @@ public class FaceDataController {
     @CrossOrigin(origins = AppConfigStringConstants.CONFIG_CORS_ALLOWED_URLS)
     @PostMapping("/v1/multi-part/verification/web/{requestId}")
     public ResponseEntity<Object> postMultiPartBasedData(@RequestParam("files") MultipartFile[] files, @PathVariable("requestId") String requestId, @RequestParam("roi") String roi) {
-        LOGGER.info("[CorrelationId: {}] Received Face Data RequestId: {}, files: {}, roi: {}", MDC.get(StringConstants.X_API_KEY_HEADER), requestId, files.length, roi);
+        String correlationId = MDC.get(StringConstants.CORRELATION_ID);
+        LOGGER.info("[CorrelationId: {}] Received Face Data RequestId: {}, files: {}, roi: {}", correlationId, requestId, files.length, roi);
+
+        try {
+            if (!faceDataVerificationService.isRequestValid(requestId)) {
+                return new ResponseEntity<>("Request is expired", HttpStatus.FORBIDDEN);
+            }
+        } catch (FaceDataVerificationException e) {
+            LOGGER.info("[CorrelationId: {}] Error occurred when trying to check the status of the request id.", correlationId, e);
+            return new ResponseEntity<>("Error occurred when trying to check the status of the request id.", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
 
         //TODO: Remove. Saving for tests
         Arrays.asList(files).forEach(file -> {
