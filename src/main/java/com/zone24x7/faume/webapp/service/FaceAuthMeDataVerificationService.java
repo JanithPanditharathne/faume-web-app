@@ -16,6 +16,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.LinkedList;
@@ -107,13 +108,17 @@ public class FaceAuthMeDataVerificationService implements FaceDataVerificationSe
      */
     @Override
     public boolean sendFaceMatchResult(String requestId, String response, String correlationId) throws FaceDataVerificationException {
-        Map<String, String> responseMap = JsonPojoConverter.toMap(response);
-        String liveness = responseMap.get("liveliness");
-        String faceMatch = responseMap.get("face_match");
+        MLConfidenceResultContainer mlConfidenceResultContainer;
+
+        try {
+            mlConfidenceResultContainer = JsonPojoConverter.toPojo(response, MLConfidenceResultContainer.class);
+        } catch (IOException e) {
+            throw new FaceDataVerificationException("Error occurred when trying process ML face data result. Request Id: {}" + requestId, e);
+        }
 
         FaceMatchResult faceMatchResult = new FaceMatchResult();
-        faceMatchResult.setFaceMatch(Double.valueOf(faceMatch));
-        faceMatchResult.setLiveness(Double.valueOf(liveness));
+        faceMatchResult.setFaceMatch(mlConfidenceResultContainer.getConfidence().getFaceMatch());
+        faceMatchResult.setLiveness(mlConfidenceResultContainer.getConfidence().getLiveness());
 
         WebClient webClient = webClientBuilder.baseUrl(integrationAppUrl).build();
 
@@ -126,9 +131,13 @@ public class FaceAuthMeDataVerificationService implements FaceDataVerificationSe
                     .bodyToMono(StatusResponse.class)
                     .block();
 
-            return (statusResponse.getStatus() == StringConstants.CONTROLLER_RESPONSE_SUCCESS);
+            if (statusResponse == null) {
+                return false;
+            }
+
+            return (StringConstants.CONTROLLER_RESPONSE_SUCCESS.equals(statusResponse.getStatus()));
         } catch (Exception e) {
-            throw new FaceDataVerificationException("Error occurred when trying to send face match result to integration app. Request Id: {}" + requestId, e);
+            throw new FaceDataVerificationException("Error occurred when trying to send face match result to integration app. Request Id: " + requestId, e);
         }
     }
 

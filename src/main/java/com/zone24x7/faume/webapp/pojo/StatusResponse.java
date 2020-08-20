@@ -16,11 +16,27 @@ public class StatusResponse {
     }
 
     /**
+     * Default constructor
+     */
+    public StatusResponse() {
+        // Default constructor
+    }
+
+    /**
      * Get status.
      *
      * @return Status
      */
     public String getStatus() {
         return status;
+    }
+
+    /**
+     * Method to set the status.
+     *
+     * @param status the status
+     */
+    public void setStatus(String status) {
+        this.status = status;
     }
 }
