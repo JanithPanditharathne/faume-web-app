@@ -20,12 +20,13 @@ import java.time.Duration;
 import java.util.Base64;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 /**
- * Implementation of the face data verification service to happen via ML backend.
+ * Implementation of the face data verification service.
  */
 @Component
-public class FaceDataVerificationServiceViaMLBackend implements FaceDataVerificationService {
+public class FaceAuthMeDataVerificationService implements FaceDataVerificationService {
     @Autowired
     private RestTemplateBuilder restTemplateBuilder;
 
@@ -48,6 +49,9 @@ public class FaceDataVerificationServiceViaMLBackend implements FaceDataVerifica
     @Value(AppConfigStringConstants.CONFIG_INTEGRATION_APP_DEVICE_BROWSER_INFO_URL)
     private String integrationAppDeviceBrowserInfoUrl;
 
+    @Value(AppConfigStringConstants.CONFIG_INTEGRATION_APP_FACE_MATCH_RESULT_URL)
+    private String integrationAppFaceMatchResultUrl;
+
     @Value(AppConfigStringConstants.CONFIG_REST_TEMPLATE_CONN_TIMEOUT_IN_MILLIS)
     private int restTemplateConnectionTimeoutInMillis;
 
@@ -67,7 +71,7 @@ public class FaceDataVerificationServiceViaMLBackend implements FaceDataVerifica
      */
     @Override
     public String sendFaceDataForVerification(FaceData faceData, String correlationId) throws FaceDataVerificationException {
-        //TODO: Change to
+        //TODO: Change to Web client
         RestTemplate restTemplate = restTemplateBuilder
                 .setConnectTimeout(Duration.ofMillis(restTemplateConnectionTimeoutInMillis))
                 .setReadTimeout(Duration.ofMillis(restTemplateReadTimeoutInMillis))
@@ -89,6 +93,42 @@ public class FaceDataVerificationServiceViaMLBackend implements FaceDataVerifica
             throw new FaceDataVerificationException("Rest client error occurred when trying to send face data to ML backend.", e);
         } catch (Exception e) {
             throw new FaceDataVerificationException("Unknown error occurred when trying to send face data to ML backend.", e);
+        }
+    }
+
+    /**
+     * Method to send face match result.
+     *
+     * @param requestId     the request id
+     * @param response      the response
+     * @param correlationId the correlation id
+     * @return true if success and false if not
+     * @throws FaceDataVerificationException if an error occurs when sending face data to integration app
+     */
+    @Override
+    public boolean sendFaceMatchResult(String requestId, String response, String correlationId) throws FaceDataVerificationException {
+        Map<String, String> responseMap = JsonPojoConverter.toMap(response);
+        String liveness = responseMap.get("liveliness");
+        String faceMatch = responseMap.get("face_match");
+
+        FaceMatchResult faceMatchResult = new FaceMatchResult();
+        faceMatchResult.setFaceMatch(Double.valueOf(faceMatch));
+        faceMatchResult.setLiveness(Double.valueOf(liveness));
+
+        WebClient webClient = webClientBuilder.baseUrl(integrationAppUrl).build();
+
+        try {
+            StatusResponse statusResponse = webClient.post()
+                    .uri(uriBuilder -> uriBuilder.path(integrationAppFaceMatchResultUrl).queryParam("request_id", "{requestId}").build(requestId))
+                    .body(Mono.just(faceMatchResult), FaceMatchResult.class)
+                    .header(StringConstants.X_API_KEY_HEADER, integrationAppApiKey)
+                    .retrieve()
+                    .bodyToMono(StatusResponse.class)
+                    .block();
+
+            return (statusResponse.getStatus() == StringConstants.CONTROLLER_RESPONSE_SUCCESS);
+        } catch (Exception e) {
+            throw new FaceDataVerificationException("Error occurred when trying to send face match result to integration app. Request Id: {}" + requestId, e);
         }
     }
 

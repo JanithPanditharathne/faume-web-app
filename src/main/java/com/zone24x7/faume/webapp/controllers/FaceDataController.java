@@ -1,8 +1,6 @@
 package com.zone24x7.faume.webapp.controllers;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.zone24x7.faume.webapp.exception.FaceDataVerificationException;
 import com.zone24x7.faume.webapp.pojo.*;
 import com.zone24x7.faume.webapp.processors.ChunkProcessor;
@@ -56,6 +54,9 @@ public class FaceDataController {
     @Value(AppConfigStringConstants.CONFIG_FACE_DATA_SAVE_TO_FILE)
     private boolean saveFaceDataToFile;
 
+    private static final String REQUEST_MALFORMED_ERROR_MESSAGE = "Request is malformed";
+    private static final String REQUEST_EXPIRED_ERROR_MESSAGE = "Request is expired";
+
     /**
      * Method to post face data from the length based approach
      *
@@ -76,24 +77,24 @@ public class FaceDataController {
 
         if (StringUtils.isEmpty(metaInfo)) {
             LOGGER.error("[CorrelationId: {}] x-meta-info header not found", correlationId);
-            return new ResponseEntity<>("Request is malformed", HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(REQUEST_MALFORMED_ERROR_MESSAGE, HttpStatus.BAD_REQUEST);
         }
 
         try {
             requestMetaInfo = JsonPojoConverter.toPojo(metaInfo, RequestMetaInfo.class);
         } catch (IOException ioe) {
             LOGGER.error("[CorrelationId: {}] Error occurred when converting meta-info header information to POJO", correlationId, ioe);
-            return new ResponseEntity<>("Request is malformed", HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(REQUEST_MALFORMED_ERROR_MESSAGE, HttpStatus.BAD_REQUEST);
         }
 
         requestMetaInfo.setRequestId(requestId);
 
         try {
             if (!faceDataVerificationService.isRequestValid(requestId)) {
-                return new ResponseEntity<>("Request is expired", HttpStatus.FORBIDDEN);
+                return new ResponseEntity<>(REQUEST_EXPIRED_ERROR_MESSAGE, HttpStatus.FORBIDDEN);
             }
         } catch (FaceDataVerificationException e) {
-            LOGGER.info("[CorrelationId: {}] Error occurred when trying to check the status of the request id.", correlationId, e);
+            LOGGER.error("[CorrelationId: {}] Error occurred when trying to check the status of the request id.", correlationId, e);
             return new ResponseEntity<>("Error occurred when trying to check the status of the request id.", HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
@@ -101,21 +102,38 @@ public class FaceDataController {
         String[] splits = lengths.split("\\s*,\\s*");
         List<Integer> lengthsAsInts = new LinkedList<>();
 
+        String faceDataResult = null;
+
         try {
             for (String length : splits) {
                 lengthsAsInts.add(Integer.valueOf(length));
             }
 
-            getOutputFrames(lengthsAsInts, bytes, requestMetaInfo, correlationId);
+            faceDataResult = sendFaceDataAndGetResult(lengthsAsInts, bytes, requestMetaInfo, correlationId);
         } catch (NumberFormatException e) {
             LOGGER.error("[CorrelationId: {}] Exception occurred while de-serializing header: {}", correlationId, metaInfo, e);
-            return new ResponseEntity<>("Request is malformed", HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(REQUEST_MALFORMED_ERROR_MESSAGE, HttpStatus.BAD_REQUEST);
+        }
+
+        if (faceDataResult == null) {
+            return new ResponseEntity<>(new StatusResponse(StringConstants.CONTROLLER_RESPONSE_FAILED), HttpStatus.OK);
+        }
+
+        boolean isSuccess;
+
+        try {
+            isSuccess = faceDataVerificationService.sendFaceMatchResult(requestId, faceDataResult, correlationId);
+        } catch (FaceDataVerificationException e) {
+            LOGGER.error("[CorrelationId: {}] Error occurred when trying to send face match result to integration app.", correlationId, e);
+            return new ResponseEntity<>("Error occurred when trying to send face match result.", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        if (!isSuccess) {
+            return new ResponseEntity<>(new StatusResponse(StringConstants.CONTROLLER_RESPONSE_FAILED), HttpStatus.OK);
         }
 
         LOGGER.info("[CorrelationId: {}] Byte array length: {}, meta-info: {}", correlationId, bytes.length, metaInfo);
-        ObjectNode jsonNode = JsonNodeFactory.instance.objectNode();
-        jsonNode.put("status", "success");
-        return new ResponseEntity<>(jsonNode, HttpStatus.OK);
+        return new ResponseEntity<>(new StatusResponse(StringConstants.CONTROLLER_RESPONSE_SUCCESS), HttpStatus.OK);
     }
 
     /**
@@ -139,28 +157,26 @@ public class FaceDataController {
         try {
             chunkRequestMetaInfo = JsonPojoConverter.toPojo(metaInfo, ChunkRequestMetaInfo.class);
         } catch (IOException e) {
-            return new ResponseEntity<>("Request is malformed.", HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(REQUEST_MALFORMED_ERROR_MESSAGE, HttpStatus.BAD_REQUEST);
         }
 
         if (!requestId.equals(chunkRequestMetaInfo.getRequestId())) {
-            return new ResponseEntity<>("Request is malformed.", HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(REQUEST_MALFORMED_ERROR_MESSAGE, HttpStatus.BAD_REQUEST);
         }
 
         try {
             if (!faceDataVerificationService.isRequestValid(requestId)) {
-                return new ResponseEntity<>("Request is expired", HttpStatus.FORBIDDEN);
+                return new ResponseEntity<>(REQUEST_EXPIRED_ERROR_MESSAGE, HttpStatus.FORBIDDEN);
             }
         } catch (FaceDataVerificationException e) {
-            LOGGER.info("[CorrelationId: {}] Error occurred when trying to check the status of the request id.", correlationId, e);
+            LOGGER.error("[CorrelationId: {}] Error occurred when trying to check the status of the request id.", correlationId, e);
             return new ResponseEntity<>("Error occurred when trying to check the status of the request id.", HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
         //TODO: Unblock servlet thread.
         chunkProcessor.storeDataChunk(chunkRequestMetaInfo, data, correlationId);
 
-        ObjectNode jsonNode = JsonNodeFactory.instance.objectNode();
-        jsonNode.put("status", "success");
-        return new ResponseEntity<>(jsonNode, HttpStatus.OK);
+        return new ResponseEntity<>(new StatusResponse(StringConstants.CONTROLLER_RESPONSE_SUCCESS), HttpStatus.OK);
     }
 
     /**
@@ -179,10 +195,10 @@ public class FaceDataController {
 
         try {
             if (!faceDataVerificationService.isRequestValid(requestId)) {
-                return new ResponseEntity<>("Request is expired", HttpStatus.FORBIDDEN);
+                return new ResponseEntity<>(REQUEST_EXPIRED_ERROR_MESSAGE, HttpStatus.FORBIDDEN);
             }
         } catch (FaceDataVerificationException e) {
-            LOGGER.info("[CorrelationId: {}] Error occurred when trying to check the status of the request id.", correlationId, e);
+            LOGGER.error("[CorrelationId: {}] Error occurred when trying to check the status of the request id.", correlationId, e);
             return new ResponseEntity<>("Error occurred when trying to check the status of the request id.", HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
@@ -195,9 +211,7 @@ public class FaceDataController {
             }
         });
 
-        ObjectNode jsonNode = JsonNodeFactory.instance.objectNode();
-        jsonNode.put("status", "success");
-        return new ResponseEntity<>(jsonNode, HttpStatus.OK);
+        return new ResponseEntity<>(new StatusResponse(StringConstants.CONTROLLER_RESPONSE_SUCCESS), HttpStatus.OK);
     }
 
     /**
@@ -221,7 +235,7 @@ public class FaceDataController {
             LOGGER.info("[CorrelationId: {}] received the request id: {} from verification id : {}", correlationId, requestIdFromVerificationId.getRequestId(), verificationId);
             return new ResponseEntity<>(requestIdFromVerificationId, HttpStatus.OK);
         } catch (FaceDataVerificationException e) {
-            LOGGER.info("[CorrelationId: {}] Error occurred when trying to get the request id from verification id.", correlationId, e);
+            LOGGER.error("[CorrelationId: {}] Error occurred when trying to get the request id from verification id.", correlationId, e);
             return new ResponseEntity<>("Error occurred when trying to get the request id from verification id.", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -245,12 +259,14 @@ public class FaceDataController {
             JsonNode response = faceDataVerificationService.sendDeviceBrowserInfo(requestId, deviceBrowserInfo);
             return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (FaceDataVerificationException e) {
-            LOGGER.info("[CorrelationId: {}] Error occurred when trying to send device browser information", correlationId, e);
+            LOGGER.error("[CorrelationId: {}] Error occurred when trying to send device browser information", correlationId, e);
             return new ResponseEntity<>("Error occurred when trying to send device browser information.", HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     /**
+     * Method to send face data.
+     *
      * (2000); // 0 - 1999
      * (5000); 7000// 2000 - 6999
      * (3000); 10000// 7000 - 9999
@@ -258,13 +274,10 @@ public class FaceDataController {
      * @param images          images array
      * @param requestMetaInfo the request meta information
      * @param correlationId   the correlation id
-     * @return list of output frames
+     * @return the face data result, null will be returned if any error occurs
      */
-    private List<OutputFrame> getOutputFrames(List<Integer> lengths, byte[] images, RequestMetaInfo requestMetaInfo, String correlationId) {
-        List<OutputFrame> outputFrames = new LinkedList<>();
+    private String sendFaceDataAndGetResult(List<Integer> lengths, byte[] images, RequestMetaInfo requestMetaInfo, String correlationId) {
         int i = 0;
-        int count = 0;
-
         List<byte[]> data = new LinkedList<>();
 
         for (int length : lengths) {
@@ -272,7 +285,6 @@ public class FaceDataController {
             data.add(bytes);
 
             i += length;
-            outputFrames.add(new OutputFrame(count++, bytes));
 
             //TODO: Remove. Saving for tests
             if (saveFaceDataToFile) {
@@ -289,10 +301,11 @@ public class FaceDataController {
         try {
             String result = faceDataVerificationService.sendFaceDataForVerification(faceData, correlationId);
             LOGGER.info("[CorrelationId: {}] Response from face verification : {}", correlationId, result);
+            return result;
         } catch (FaceDataVerificationException e) {
             LOGGER.error("[CorrelationId: {}] Error occurred when trying to verify face data", correlationId, e);
         }
 
-        return outputFrames;
+        return null;
     }
 }
