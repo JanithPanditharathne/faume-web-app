@@ -250,7 +250,7 @@ public class FaceDataController {
      */
     @CrossOrigin(origins = AppConfigStringConstants.CONFIG_CORS_ALLOWED_URLS)
     @PostMapping(path = "/v1/web/device-browser-info")
-    public ResponseEntity<Object> sendFaceMatchResults(@RequestParam(value = "request_id") String requestId,
+    public ResponseEntity<Object> sendDeviceBrowserInformation(@RequestParam(value = "request_id") String requestId,
                                                        @RequestBody DeviceBrowserInfo deviceBrowserInfo) {
 
         String correlationId = MDC.get(StringConstants.CORRELATION_ID);
