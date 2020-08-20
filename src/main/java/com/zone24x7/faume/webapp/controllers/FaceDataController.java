@@ -42,12 +42,6 @@ public class FaceDataController {
     @Autowired
     private FaceDataVerificationService faceDataVerificationService;
 
-    @Value(AppConfigStringConstants.CONFIG_ACCOUNT_ID)
-    private String accountId;
-
-    @Value(AppConfigStringConstants.CONFIG_PROFILE_COUNT)
-    private int profileCount;
-
     @Value(AppConfigStringConstants.CONFIG_PATTERN_ID)
     private int patternId;
 
@@ -88,9 +82,12 @@ public class FaceDataController {
         }
 
         requestMetaInfo.setRequestId(requestId);
+        RequestIdValidityResponse requestValidityResponse;
 
         try {
-            if (!faceDataVerificationService.isRequestValid(requestId)) {
+            requestValidityResponse = faceDataVerificationService.isRequestValid(requestId);
+
+            if (requestValidityResponse == null || RequestIdStatus.INVALID == requestValidityResponse.getStatus()) {
                 return new ResponseEntity<>(REQUEST_EXPIRED_ERROR_MESSAGE, HttpStatus.FORBIDDEN);
             }
         } catch (FaceDataVerificationException e) {
@@ -109,7 +106,7 @@ public class FaceDataController {
                 lengthsAsInts.add(Integer.valueOf(length));
             }
 
-            faceDataResult = sendFaceDataAndGetResult(lengthsAsInts, bytes, requestMetaInfo, correlationId);
+            faceDataResult = sendFaceDataAndGetResult(lengthsAsInts, bytes, requestMetaInfo, correlationId, requestValidityResponse.getAccountId(), requestValidityResponse.getProfileCount());
         } catch (NumberFormatException e) {
             LOGGER.error("[CorrelationId: {}] Exception occurred while de-serializing header: {}", correlationId, metaInfo, e);
             return new ResponseEntity<>(REQUEST_MALFORMED_ERROR_MESSAGE, HttpStatus.BAD_REQUEST);
@@ -165,7 +162,9 @@ public class FaceDataController {
         }
 
         try {
-            if (!faceDataVerificationService.isRequestValid(requestId)) {
+            RequestIdValidityResponse requestValidityResponse = faceDataVerificationService.isRequestValid(requestId);
+
+            if (requestValidityResponse == null || RequestIdStatus.INVALID == requestValidityResponse.getStatus()) {
                 return new ResponseEntity<>(REQUEST_EXPIRED_ERROR_MESSAGE, HttpStatus.FORBIDDEN);
             }
         } catch (FaceDataVerificationException e) {
@@ -194,7 +193,9 @@ public class FaceDataController {
         LOGGER.info("[CorrelationId: {}] Received Face Data RequestId: {}, files: {}, roi: {}", correlationId, requestId, files.length, roi);
 
         try {
-            if (!faceDataVerificationService.isRequestValid(requestId)) {
+            RequestIdValidityResponse requestValidityResponse = faceDataVerificationService.isRequestValid(requestId);
+
+            if (requestValidityResponse == null || RequestIdStatus.INVALID == requestValidityResponse.getStatus()) {
                 return new ResponseEntity<>(REQUEST_EXPIRED_ERROR_MESSAGE, HttpStatus.FORBIDDEN);
             }
         } catch (FaceDataVerificationException e) {
@@ -276,7 +277,7 @@ public class FaceDataController {
      * @param correlationId   the correlation id
      * @return the face data result, null will be returned if any error occurs
      */
-    private String sendFaceDataAndGetResult(List<Integer> lengths, byte[] images, RequestMetaInfo requestMetaInfo, String correlationId) {
+    private String sendFaceDataAndGetResult(List<Integer> lengths, byte[] images, RequestMetaInfo requestMetaInfo, String correlationId, String accountId, int profileCount) {
         int i = 0;
         List<byte[]> data = new LinkedList<>();
 

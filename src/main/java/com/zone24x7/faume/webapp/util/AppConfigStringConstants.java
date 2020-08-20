@@ -5,8 +5,6 @@ package com.zone24x7.faume.webapp.util;
  */
 public final class AppConfigStringConstants {
     public static final String CONFIG_FACE_DATA_VERIFICATION_URL = "${face.verification.url}";
-    public static final String CONFIG_ACCOUNT_ID = "${face.verification.account-id}";
-    public static final String CONFIG_PROFILE_COUNT = "${face.verification.profile-count}";
     public static final String CONFIG_PATTERN_ID = "${face.verification.pattern-id}";
     public static final String CONFIG_FACE_DATA_SAVE_TO_FILE = "${face.data.save-to-file}";
     public static final String CONFIG_REST_TEMPLATE_CONN_TIMEOUT_IN_MILLIS = "${spring.rest-template.connection.timeout-in-millis}";

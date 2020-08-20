@@ -169,19 +169,18 @@ public class FaceAuthMeDataVerificationService implements FaceDataVerificationSe
      * @param requestId request id to be verified
      * @return verification status: VALID/INVALID
      */
-    public boolean isRequestValid(String requestId) throws FaceDataVerificationException {
+    public RequestIdValidityResponse isRequestValid(String requestId) throws FaceDataVerificationException {
         WebClient webClient = webClientBuilder.baseUrl(integrationAppUrl).build();
 
         try {
-            RequestIdResponse requestIdResponse = webClient
+            return webClient
                     .get()
                     .uri(uriBuilder -> uriBuilder.path(integrationAppRequestVerificationUrl).queryParam("request_id", "{requestId}").build(requestId))
                     .header(StringConstants.X_API_KEY_HEADER, integrationAppApiKey)
                     .retrieve()
-                    .bodyToMono(RequestIdResponse.class)
+                    .bodyToMono(RequestIdValidityResponse.class)
                     .block();
 
-            return requestIdResponse != null && RequestIdStatus.VALID == requestIdResponse.getStatus();
         } catch (Exception e) {
             throw new FaceDataVerificationException("Error occurred when trying to retrieve status of the request id : " + requestId, e);
         }
