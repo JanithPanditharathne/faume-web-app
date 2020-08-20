@@ -39,6 +39,15 @@ public class FaceDataVerificationServiceViaMLBackend implements FaceDataVerifica
     @Value(AppConfigStringConstants.CONFIG_INTEGRATION_APP_URL)
     private String integrationAppUrl;
 
+    @Value(AppConfigStringConstants.CONFIG_INTEGRATION_APP_REQUEST_INFO_URL)
+    private String integrationAppRequestInfoUrl;
+
+    @Value(AppConfigStringConstants.CONFIG_INTEGRATION_APP_REQUEST_VERIFICATION_URL)
+    private String integrationAppRequestVerificationUrl;
+
+    @Value(AppConfigStringConstants.CONFIG_INTEGRATION_APP_DEVICE_BROWSER_INFO_URL)
+    private String integrationAppDeviceBrowserInfoUrl;
+
     @Value(AppConfigStringConstants.CONFIG_REST_TEMPLATE_CONN_TIMEOUT_IN_MILLIS)
     private int restTemplateConnectionTimeoutInMillis;
 
@@ -95,7 +104,7 @@ public class FaceDataVerificationServiceViaMLBackend implements FaceDataVerifica
         try {
             return webClient
                     .get()
-                    .uri(uriBuilder -> uriBuilder.path("/v1/request-info").queryParam("verification_id", "{verificationId}").build(verificationId))
+                    .uri(uriBuilder -> uriBuilder.path(integrationAppRequestInfoUrl).queryParam("verification_id", "{verificationId}").build(verificationId))
                     .header(StringConstants.X_API_KEY_HEADER, integrationAppApiKey)
                     .retrieve()
                     .bodyToMono(RequestIdResponse.class)
@@ -117,7 +126,7 @@ public class FaceDataVerificationServiceViaMLBackend implements FaceDataVerifica
         try {
             RequestIdResponse requestIdResponse = webClient
                     .get()
-                    .uri(uriBuilder -> uriBuilder.path("/v1/request-verification").queryParam("request_id", "{requestId}").build(requestId))
+                    .uri(uriBuilder -> uriBuilder.path(integrationAppRequestVerificationUrl).queryParam("request_id", "{requestId}").build(requestId))
                     .header(StringConstants.X_API_KEY_HEADER, integrationAppApiKey)
                     .retrieve()
                     .bodyToMono(RequestIdResponse.class)
@@ -142,7 +151,7 @@ public class FaceDataVerificationServiceViaMLBackend implements FaceDataVerifica
         try {
             return webClient
                     .post()
-                    .uri(uriBuilder -> uriBuilder.path("/v1/device-browser-info").queryParam("request_id", "{requestId}").build(requestId))
+                    .uri(uriBuilder -> uriBuilder.path(integrationAppDeviceBrowserInfoUrl).queryParam("request_id", "{requestId}").build(requestId))
                     .body(Mono.just(deviceBrowserInfo), DeviceBrowserInfo.class)
                     .header(StringConstants.X_API_KEY_HEADER, integrationAppApiKey)
                     .retrieve()
