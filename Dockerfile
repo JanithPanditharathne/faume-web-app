@@ -30,4 +30,4 @@ RUN mkdir -p /app
 WORKDIR /app
 COPY --from=Builder /app/target/web-app.jar /app
 EXPOSE 8081
-CMD ["java","-jar","/app/web-app.jar"]
+ENTRYPOINT ["java","-jar","/app/web-app.jar","--spring.config.location=/app/application.properties"]
