@@ -17,7 +17,7 @@ public class FileUploadExceptionAdvice {
     /**
      * Exception handler for too large file
      *
-     * @param exc exception occured
+     * @param exc exception occurred
      * @return Response message
      */
     @ExceptionHandler(MaxUploadSizeExceededException.class)
