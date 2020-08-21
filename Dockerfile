@@ -30,4 +30,5 @@ RUN mkdir -p /app
 WORKDIR /app
 COPY --from=Builder /app/target/web-app.jar /app
 EXPOSE 8081
-ENTRYPOINT ["java","-jar","/app/web-app.jar"]
+
+CMD ["java","-jar","/app/integration-app.jar"]
