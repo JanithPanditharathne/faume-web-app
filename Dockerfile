@@ -31,4 +31,4 @@ WORKDIR /app
 COPY --from=Builder /app/target/web-app.jar /app
 EXPOSE 8081
 
-CMD ["java","-jar","/app/integration-app.jar"]
+CMD ["java","-jar","/app/web-app.jar"]
