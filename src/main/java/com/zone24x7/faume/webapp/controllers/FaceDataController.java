@@ -60,7 +60,7 @@ public class FaceDataController {
      * @return 200 OK if success, 400 if request is malformed, 403 if request is expired.
      */
     @CrossOrigin(origins = AppConfigStringConstants.CONFIG_CORS_ALLOWED_URLS)
-    @PostMapping(path = "/v1/length-based/verification/web/{requestId}")
+    @PostMapping(path = "/web-app/v1/length-based/verification/web/{requestId}")
     public ResponseEntity<Object> postLengthBasedData(@PathVariable String requestId,
                                                       @RequestBody byte[] bytes,
                                                       @RequestHeader("x-meta-info") String metaInfo) {
@@ -142,7 +142,7 @@ public class FaceDataController {
      * @return 200 OK if success, 400 if the request is malformed, 403 if the request has expired
      */
     @CrossOrigin(origins = AppConfigStringConstants.CONFIG_CORS_ALLOWED_URLS)
-    @PostMapping(path = "/v1/chunk-based/verification/web/{requestId}")
+    @PostMapping(path = "/web-app/v1/chunk-based/verification/web/{requestId}")
     public ResponseEntity<Object> postChunkBasedData(@PathVariable String requestId,
                                                      @RequestBody byte[] data,
                                                      @RequestHeader("x-meta-info") String metaInfo) {
@@ -187,7 +187,7 @@ public class FaceDataController {
      * @return 200 OK if success, 400 if request is malformed, 403 if request is expired.
      */
     @CrossOrigin(origins = AppConfigStringConstants.CONFIG_CORS_ALLOWED_URLS)
-    @PostMapping("/v1/multi-part/verification/web/{requestId}")
+    @PostMapping("/web-app/v1/multi-part/verification/web/{requestId}")
     public ResponseEntity<Object> postMultiPartBasedData(@RequestParam("files") MultipartFile[] files, @PathVariable("requestId") String requestId, @RequestParam("roi") String roi) {
         String correlationId = MDC.get(StringConstants.CORRELATION_ID);
         LOGGER.info("[CorrelationId: {}] Received Face Data RequestId: {}, files: {}, roi: {}", correlationId, requestId, files.length, roi);
@@ -223,7 +223,7 @@ public class FaceDataController {
      * request_id: the request id associated with the given verification id.
      */
     @CrossOrigin(origins = AppConfigStringConstants.CONFIG_CORS_ALLOWED_URLS)
-    @GetMapping("/v1/request-info")
+    @GetMapping("/web-app/v1/request-info")
     public ResponseEntity<Object> getRequestId(@RequestParam(value = "verification_id", defaultValue = "") String verificationId) {
         String correlationId = MDC.get(StringConstants.CORRELATION_ID);
 
@@ -249,7 +249,7 @@ public class FaceDataController {
      * @return 200 OK status if success, 400 if bad request and 403 if forbidden
      */
     @CrossOrigin(origins = AppConfigStringConstants.CONFIG_CORS_ALLOWED_URLS)
-    @PostMapping(path = "/v1/web/device-browser-info")
+    @PostMapping(path = "/web-app/v1/web/device-browser-info")
     public ResponseEntity<Object> sendDeviceBrowserInformation(@RequestParam(value = "request_id") String requestId,
                                                        @RequestBody DeviceBrowserInfo deviceBrowserInfo) {
 
