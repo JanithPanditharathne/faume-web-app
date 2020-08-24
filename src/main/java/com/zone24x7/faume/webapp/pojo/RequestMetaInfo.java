@@ -5,7 +5,6 @@ package com.zone24x7.faume.webapp.pojo;
  */
 public class RequestMetaInfo {
     private String lengths;
-    private String requestId;
     private int roi;
 
     /**
@@ -24,24 +23,6 @@ public class RequestMetaInfo {
      */
     public void setLengths(String lengths) {
         this.lengths = lengths;
-    }
-
-    /**
-     * Method to get the request id
-     *
-     * @return request id
-     */
-    public String getRequestId() {
-        return requestId;
-    }
-
-    /**
-     * Method to set the request id
-     *
-     * @param requestId request id to be set
-     */
-    public void setRequestId(String requestId) {
-        this.requestId = requestId;
     }
 
     /**

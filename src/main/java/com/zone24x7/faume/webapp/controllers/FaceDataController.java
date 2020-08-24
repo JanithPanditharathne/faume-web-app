@@ -66,7 +66,7 @@ public class FaceDataController {
                                                       @RequestHeader("x-meta-info") String metaInfo) {
 
         String correlationId = MDC.get(StringConstants.CORRELATION_ID);
-        LOGGER.info("[CorrelationId: {}] Received Face Data RequestId: {}", correlationId, requestId);
+        LOGGER.info("[CorrelationId: {}] Received face data. RequestId: {}", correlationId, requestId);
         RequestMetaInfo requestMetaInfo;
 
         if (StringUtils.isEmpty(metaInfo)) {
@@ -81,7 +81,6 @@ public class FaceDataController {
             return new ResponseEntity<>(REQUEST_MALFORMED_ERROR_MESSAGE, HttpStatus.BAD_REQUEST);
         }
 
-        requestMetaInfo.setRequestId(requestId);
         RequestIdValidityResponse requestValidityResponse;
 
         try {
@@ -106,7 +105,7 @@ public class FaceDataController {
                 lengthsAsInts.add(Integer.valueOf(length));
             }
 
-            faceDataResult = sendFaceDataAndGetResult(lengthsAsInts, bytes, requestMetaInfo, correlationId, requestValidityResponse.getAccountId(), requestValidityResponse.getProfileCount());
+            faceDataResult = sendFaceDataAndGetResult(lengthsAsInts, bytes, requestMetaInfo, correlationId, requestId, requestValidityResponse.getAccountId(), requestValidityResponse.getProfileCount());
         } catch (NumberFormatException e) {
             LOGGER.error("[CorrelationId: {}] Exception occurred while de-serializing header: {}", correlationId, metaInfo, e);
             return new ResponseEntity<>(REQUEST_MALFORMED_ERROR_MESSAGE, HttpStatus.BAD_REQUEST);
@@ -119,6 +118,7 @@ public class FaceDataController {
         boolean isSuccess;
 
         try {
+            // Send face match data to the integration app and get the result.
             isSuccess = faceDataVerificationService.sendFaceMatchResult(requestId, faceDataResult, correlationId);
         } catch (FaceDataVerificationException e) {
             LOGGER.error("[CorrelationId: {}] Error occurred when trying to send face match result to integration app.", correlationId, e);
@@ -206,7 +206,7 @@ public class FaceDataController {
         //TODO: Remove. Saving for tests
         Arrays.asList(files).forEach(file -> {
             try {
-                storageService.save(file);
+                storageService.save(file, Paths.get(file.getName()));
             } catch (IOException e) {
                 LOGGER.error("[CorrelationId: {}] Error occurred when trying to save file: {}", MDC.get("correlationId"), file.getName());
             }
@@ -244,14 +244,14 @@ public class FaceDataController {
     /**
      * Controller method to store device binding information.
      *
-     * @param requestId the request id
+     * @param requestId         the request id
      * @param deviceBrowserInfo the face match result
      * @return 200 OK status if success, 400 if bad request and 403 if forbidden
      */
     @CrossOrigin(origins = AppConfigStringConstants.CONFIG_CORS_ALLOWED_URLS)
     @PostMapping(path = "/web-app/v1/web/device-browser-info")
     public ResponseEntity<Object> sendDeviceBrowserInformation(@RequestParam(value = "request_id") String requestId,
-                                                       @RequestBody DeviceBrowserInfo deviceBrowserInfo) {
+                                                               @RequestBody DeviceBrowserInfo deviceBrowserInfo) {
 
         String correlationId = MDC.get(StringConstants.CORRELATION_ID);
         LOGGER.info("[CorrelationId: {}] Received device browser data. Request Id : {}, DeviceBrowserInfo: {}", correlationId, requestId, deviceBrowserInfo);
@@ -267,7 +267,7 @@ public class FaceDataController {
 
     /**
      * Method to send face data.
-     *
+     * <p>
      * (2000); // 0 - 1999
      * (5000); 7000// 2000 - 6999
      * (3000); 10000// 7000 - 9999
@@ -275,31 +275,35 @@ public class FaceDataController {
      * @param images          images array
      * @param requestMetaInfo the request meta information
      * @param correlationId   the correlation id
+     * @param requestId       the request id
+     * @param accountId       the correlation id
+     * @param profileCount    the profile count
      * @return the face data result, null will be returned if any error occurs
      */
-    private String sendFaceDataAndGetResult(List<Integer> lengths, byte[] images, RequestMetaInfo requestMetaInfo, String correlationId, String accountId, int profileCount) {
+    private String sendFaceDataAndGetResult(List<Integer> lengths, byte[] images, RequestMetaInfo requestMetaInfo, String correlationId, String requestId, String accountId, int profileCount) {
         int i = 0;
         List<byte[]> data = new LinkedList<>();
 
+        // Iterate the lengths and extract the bytes for each frame separately and add to a byte array list.
         for (int length : lengths) {
             byte[] bytes = Arrays.copyOfRange(images, i, length + i);
             data.add(bytes);
-
             i += length;
 
-            //TODO: Remove. Saving for tests
+            // If set to true via config, save the images. (This is for debugging purposes)
             if (saveFaceDataToFile) {
                 try {
-                    storageService.saveImage(Paths.get("frame" + length + ".png"), bytes, "png");
+                    storageService.saveImage(Paths.get("frame" + length + ".jpeg"), bytes, "jpeg");
                 } catch (IOException e) {
-                    LOGGER.error("[CorrelationId: {}] Error occurred when trying to save file : {}", correlationId, "frame" + length + ".png");
+                    LOGGER.error("[CorrelationId: {}] Error occurred when trying to save file : {}", correlationId, "frame" + length + ".jpeg");
                 }
             }
         }
 
-        FaceData faceData = new FaceData(requestMetaInfo.getRequestId(), accountId, profileCount, patternId, requestMetaInfo.getRoi(), data);
+        FaceData faceData = new FaceData(requestId, accountId, profileCount, patternId, requestMetaInfo.getRoi(), data);
 
         try {
+            // Send face data to ML backend and verify
             String result = faceDataVerificationService.sendFaceDataForVerification(faceData, correlationId);
             LOGGER.info("[CorrelationId: {}] Response from face verification : {}", correlationId, result);
             return result;

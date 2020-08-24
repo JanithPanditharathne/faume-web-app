@@ -21,7 +21,6 @@ import java.time.Duration;
 import java.util.Base64;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Implementation of the face data verification service.
@@ -72,7 +71,6 @@ public class FaceAuthMeDataVerificationService implements FaceDataVerificationSe
      */
     @Override
     public String sendFaceDataForVerification(FaceData faceData, String correlationId) throws FaceDataVerificationException {
-        //TODO: Change to Web client
         RestTemplate restTemplate = restTemplateBuilder
                 .setConnectTimeout(Duration.ofMillis(restTemplateConnectionTimeoutInMillis))
                 .setReadTimeout(Duration.ofMillis(restTemplateReadTimeoutInMillis))
@@ -81,6 +79,7 @@ public class FaceAuthMeDataVerificationService implements FaceDataVerificationSe
         List<byte[]> faceDataByteList = faceData.getData();
         List<String> base64DataToSend = new LinkedList<>();
 
+        // Convert byte array list to base64 encoded byte array list
         for (byte[] data : faceDataByteList) {
             base64DataToSend.add(Base64.getEncoder().encodeToString(data));
         }
@@ -120,6 +119,7 @@ public class FaceAuthMeDataVerificationService implements FaceDataVerificationSe
         faceMatchResult.setFaceMatch(mlConfidenceResultContainer.getConfidence().getFaceMatch());
         faceMatchResult.setLiveness(mlConfidenceResultContainer.getConfidence().getLiveness());
 
+        // Send face data to integration app.
         WebClient webClient = webClientBuilder.baseUrl(integrationAppUrl).build();
 
         try {
