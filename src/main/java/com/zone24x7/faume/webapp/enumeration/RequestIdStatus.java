@@ -1,10 +1,11 @@
-package com.zone24x7.faume.webapp.pojo;
+package com.zone24x7.faume.webapp.enumeration;
 
 /**
  * Enum constants for validity status
  */
-public enum Validity {
-    VALID("VALID"),INVALID("INVALID");
+public enum RequestIdStatus {
+    VALID("VALID"),
+    INVALID("INVALID");
 
     private String value;
 
@@ -13,8 +14,7 @@ public enum Validity {
      *
      * @param value validity status value of the enum constant
      */
-    Validity(String value){
-        this.value=value;
+    RequestIdStatus(String value) {
+        this.value = value;
     }
-
 }

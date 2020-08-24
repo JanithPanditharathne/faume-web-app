@@ -1,6 +1,7 @@
 package com.zone24x7.faume.webapp.pojo;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.zone24x7.faume.webapp.enumeration.RequestIdStatus;
 
 /**
  * POJO class for Response of get request_id from integration-app

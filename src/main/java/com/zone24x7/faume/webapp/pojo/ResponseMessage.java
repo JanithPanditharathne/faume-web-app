@@ -1,4 +1,4 @@
-package com.zone24x7.faume.webapp.message;
+package com.zone24x7.faume.webapp.pojo;
 
 /**
  * Class for response message

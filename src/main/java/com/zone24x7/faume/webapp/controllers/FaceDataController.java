@@ -1,6 +1,7 @@
 package com.zone24x7.faume.webapp.controllers;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.zone24x7.faume.webapp.enumeration.RequestIdStatus;
 import com.zone24x7.faume.webapp.exception.FaceDataVerificationException;
 import com.zone24x7.faume.webapp.pojo.*;
 import com.zone24x7.faume.webapp.processors.ChunkProcessor;
