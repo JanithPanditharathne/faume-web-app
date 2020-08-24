@@ -2,6 +2,9 @@ package com.zone24x7.faume.webapp;
 
 import com.zone24x7.faume.webapp.util.AppConfigStringConstants;
 import io.netty.channel.ChannelOption;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -11,6 +14,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
 import reactor.netty.tcp.TcpClient;
 
+import javax.net.ssl.SSLException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -30,12 +34,17 @@ public class SpringMainConfig {
      * @return WebClient.Builder web client builder instance
      */
     @Bean("webClientBuilder")
-    public WebClient.Builder getWebClientBuilder(){
+    public WebClient.Builder getWebClientBuilder() throws SSLException {
+        SslContext sslContext = SslContextBuilder
+                .forClient()
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .build();
+
         TcpClient tcpClient = TcpClient
                 .create()
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, restTemplateConnectionTimeoutInMillis)
                 .doOnConnected(connection -> connection.addHandlerLast(new ReadTimeoutHandler(restTemplateReadTimeoutInMillis, TimeUnit.MILLISECONDS)));
 
-        return WebClient.builder().clientConnector(new ReactorClientHttpConnector(HttpClient.from(tcpClient)));
+        return WebClient.builder().clientConnector(new ReactorClientHttpConnector(HttpClient.from(tcpClient).secure(t -> t.sslContext(sslContext))));
     }
 }
