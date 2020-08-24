@@ -7,8 +7,8 @@ public final class AppConfigStringConstants {
     public static final String CONFIG_FACE_DATA_VERIFICATION_URL = "${face.verification.url}";
     public static final String CONFIG_PATTERN_ID = "${face.verification.pattern-id}";
     public static final String CONFIG_FACE_DATA_SAVE_TO_FILE = "${face.data.save-to-file}";
-    public static final String CONFIG_REST_TEMPLATE_CONN_TIMEOUT_IN_MILLIS = "${spring.rest-template.connection.timeout-in-millis}";
-    public static final String CONFIG_REST_TEMPLATE_READ_TIMEOUT_IN_MILLIS = "${spring.rest-template.read.timeout-in-millis}";
+    public static final String CONFIG_REST_TEMPLATE_CONN_TIMEOUT_IN_MILLIS = "${spring.web-client.connection.timeout-in-millis}";
+    public static final String CONFIG_REST_TEMPLATE_READ_TIMEOUT_IN_MILLIS = "${spring.web-client.read.timeout-in-millis}";
     public static final String CONFIG_INTEGRATION_APP_URL = "${face.integration-app.url}";
     public static final String CONFIG_INTEGRATION_APP_REQUEST_INFO_URL = "${face.integration-app.request-info-url}";
     public static final String CONFIG_INTEGRATION_APP_REQUEST_VERIFICATION_URL = "${face.integration-app.request-verification-url}";

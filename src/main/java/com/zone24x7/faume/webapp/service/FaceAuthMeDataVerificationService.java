@@ -9,15 +9,11 @@ import com.zone24x7.faume.webapp.util.StringConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.util.Base64;
 import java.util.LinkedList;
 import java.util.List;
@@ -27,9 +23,6 @@ import java.util.List;
  */
 @Component
 public class FaceAuthMeDataVerificationService implements FaceDataVerificationService {
-    @Autowired
-    private RestTemplateBuilder restTemplateBuilder;
-
     @Autowired
     @Qualifier("webClientBuilder")
     private WebClient.Builder webClientBuilder;
@@ -71,11 +64,6 @@ public class FaceAuthMeDataVerificationService implements FaceDataVerificationSe
      */
     @Override
     public String sendFaceDataForVerification(FaceData faceData, String correlationId) throws FaceDataVerificationException {
-        RestTemplate restTemplate = restTemplateBuilder
-                .setConnectTimeout(Duration.ofMillis(restTemplateConnectionTimeoutInMillis))
-                .setReadTimeout(Duration.ofMillis(restTemplateReadTimeoutInMillis))
-                .build();
-
         List<byte[]> faceDataByteList = faceData.getData();
         List<String> base64DataToSend = new LinkedList<>();
 
@@ -88,11 +76,18 @@ public class FaceAuthMeDataVerificationService implements FaceDataVerificationSe
         JsonNode verificationFaceDataAsJson = JsonPojoConverter.toJson(verificationFaceData);
 
         try {
-            return restTemplate.postForObject(mlBackendUrl, verificationFaceDataAsJson, String.class, faceData.getAccountId(), faceData.getProfileCount(), faceData.getPatternId());
-        } catch (RestClientException e) {
-            throw new FaceDataVerificationException("Rest client error occurred when trying to send face data to ML backend.", e);
+            WebClient webClient = webClientBuilder.baseUrl(mlBackendUrl).build();
+            return webClient.post()
+                    .uri(uriBuilder -> uriBuilder.queryParam("account_id", "{account_id}")
+                                                 .queryParam("profile_count", "{profile_count}")
+                                                 .queryParam("pattern_id", "{pattern_id}")
+                                                 .build(faceData.getAccountId(), faceData.getProfileCount(), faceData.getPatternId()))
+                    .body(Mono.just(verificationFaceDataAsJson), JsonNode.class)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
         } catch (Exception e) {
-            throw new FaceDataVerificationException("Unknown error occurred when trying to send face data to ML backend.", e);
+            throw new FaceDataVerificationException("Error occurred when trying to send face data to ML backend.", e);
         }
     }
 
