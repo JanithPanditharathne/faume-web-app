@@ -1,0 +1,18 @@
+# MacOS
+.DS_Store
+
+# Dependency
+node_modules
+
+# Logs
+*.log
+
+# Environment
+.env
+
+# Miscellaneous
+Dockerfile
+.dockerignore
+.git
+.gitignore
+.vscode

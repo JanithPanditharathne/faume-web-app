@@ -1,34 +1,26 @@
-FROM adoptopenjdk/openjdk11:alpine as Builder
-RUN apk add --no-cache curl tar bash procps
+# Build container
+FROM maven:3.6.3-adoptopenjdk-11 as builder
 
-ARG MAVEN_VERSION=3.6.3         
-ARG USER_HOME_DIR="/root"
-ARG BASE_URL=https://apache.osuosl.org/maven/maven-3/${MAVEN_VERSION}/binaries
+# Create app directory
+WORKDIR /usr/src/app
 
-RUN mkdir -p /app
-COPY . /app
-WORKDIR /app
+# Copy source to working directory
+COPY . .
 
-RUN mkdir -p /usr/share/maven /usr/share/maven/ref \
-  && echo "Downlaoding maven" \
-  && curl -fsSL -o /tmp/apache-maven.tar.gz ${BASE_URL}/apache-maven-${MAVEN_VERSION}-bin.tar.gz \
-  \
-  && echo "Unziping maven" \
-  && tar -xzf /tmp/apache-maven.tar.gz -C /usr/share/maven --strip-components=1 \
-  \
-  && echo "Cleaning and setting links" \
-  && rm -f /tmp/apache-maven.tar.gz \
-  && ln -s /usr/share/maven/bin/mvn /usr/bin/mvn
+RUN mvn -Dmaven.test.skip=true clean package
 
-ENV MAVEN_HOME /usr/share/maven
-ENV MAVEN_CONFIG "$USER_HOME_DIR/.m2"
-RUN cd /app &&  mvn clean package && mv target/web-app-*.jar  target/web-app.jar
-
-
+# Pull build into a second stage deploy container
 FROM adoptopenjdk/openjdk11:alpine
-RUN mkdir -p /app
-WORKDIR /app
-COPY --from=Builder /app/target/web-app.jar /app
+
+LABEL maintainer="Zone24x7 (Private) Limited"
+
+# Copy application data
+COPY --from=builder --chown=1001:1001 /usr/src/app/target/web-app-*.jar /usr/src/app/web.jar
+
+USER 1001
+
+WORKDIR /usr/src/app
+
 EXPOSE 8081
 
-CMD ["java","-jar","/app/web-app.jar","--spring.config.location=/app/application.properties"]
+ENTRYPOINT ["java","-jar","web.jar","--spring.config.location=application.properties"]
