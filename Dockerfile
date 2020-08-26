@@ -16,6 +16,7 @@ LABEL maintainer="Zone24x7 (Private) Limited"
 
 # Copy application data
 COPY --from=builder --chown=1001:1001 /usr/src/app/target/web-app-*.jar /usr/src/app/web.jar
+COPY --from=builder --chown=1001:1001 /usr/src/app/src/main/resources/application-docker.properties /usr/src/app/application.properties
 
 USER 1001
 
